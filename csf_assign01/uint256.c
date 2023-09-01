@@ -31,7 +31,7 @@ UInt256 uint256_create_from_hex(const char *hex) {
   int k = 0;
   while (*hex) {
     if (i < 8) {
-      if (k < 9) {
+      if (k < 8) {
         uint32_t j = *hex++;
         if (j >= '0' && j <= '9') {
           j = j - '0';
