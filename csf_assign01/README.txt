@@ -1,6 +1,7 @@
 Contributions
 -------------
 Arijit
+- uint256_get_bits
 - uint256_create_from_hex
 
 Taran
