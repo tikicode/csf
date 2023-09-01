@@ -1,1 +1,8 @@
-TODO: add information about contributions of team member(s)
+Contributions
+-------------
+Arijit
+- uint256_create_from_hex
+
+Taran
+- uint256_create_from_u32
+- uint256_create
