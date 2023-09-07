@@ -60,11 +60,13 @@ UInt256 uint256_create_from_hex(const char *hex) {
 // Return a dynamically-allocated string of hex digits representing the
 // given UInt256 value.
 char *uint256_format_as_hex(UInt256 val) {
-  char *hex = NULL;
+  char *hex = "";
+  hex = (char *)malloc(64 * sizeof(char) +1);
+
   for (size_t i = 7; i >= 0; --i) {
-    hex += sprintf(hex, "%x", val.data[i]);
+    sprintf(hex, "%x", val.data[i]);
   }
-  printf("%s", hex);
+  printf(" %s ", hex);
   return hex;
 }
 
