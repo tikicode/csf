@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <math.h>
+#include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -59,7 +61,10 @@ UInt256 uint256_create_from_hex(const char *hex) {
 // given UInt256 value.
 char *uint256_format_as_hex(UInt256 val) {
   char *hex = NULL;
-  // TODO: implement
+  for (size_t i = 7; i >= 0; --i) {
+    hex += sprintf(hex, "%x", val.data[i]);
+  }
+  printf("%s", hex);
   return hex;
 }
 
