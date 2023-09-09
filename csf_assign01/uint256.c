@@ -57,18 +57,66 @@ UInt256 uint256_create_from_hex(const char *hex) {
   return result;
 }
 
+void removeLeadingZeros(char *str) {
+  int len = strlen(str);
+    int nonZeroIndex = -1; // Index of the first non-zero character
+    
+    // Find the first non-zero character
+    for (int i = 0; i < len; i++) {
+        if (str[i] != '0') {
+            nonZeroIndex = i;
+            break;
+        }
+    }
+
+    if (nonZeroIndex >= 0) {
+        // Shift the string to remove leading zeros
+        for (int i = 0; i < len - nonZeroIndex; i++) {
+            str[i] = str[i + nonZeroIndex];
+        }
+        str[len - nonZeroIndex] = '\0'; // Null-terminate the string
+    } else {
+        // If the string contains only zeros, leave one zero
+        str[0] = '0';
+        str[1] = '\0';
+    }
+}
+
 // Return a dynamically-allocated string of hex digits representing the
 // given UInt256 value.
 char *uint256_format_as_hex(UInt256 val) {
-  char *hex = "";
-  hex = (char *)malloc(64 * sizeof(char) +1);
+ char *hex = (char *)malloc(64 * sizeof(char) + 1);
+    if (hex == NULL) {
+        // Handle memory allocation error
+        return NULL;
+    }
+    hex[64] = '\0';  // Null-terminate the string
 
-  for (size_t i = 7; i >= 0; --i) {
-    sprintf(hex, "%x", val.data[i]);
-  }
-  printf(" %s ", hex);
-  return hex;
+    // Start with an empty string
+    hex[0] = '\0';
+
+    int isZero = 1; // Flag to check if all segments are zero
+
+    for (int i = 0; i < 8; i++) {
+        // Use sprintf to format and concatenate the hexadecimal values
+        char temp[9];
+        sprintf(temp, "%08X", val.data[i]);
+        
+        // Remove leading zeros from temp
+        removeLeadingZeros(temp);
+
+        if (isZero && temp[0] != '0') {
+            isZero = 0; // Mark as non-zero when a non-zero segment is found
+        }
+
+        // Append the segment to the hex string (skip leading zeros if all segments are not zero)
+        strcat(hex, temp);
+    }
+
+    printf(" %s ", hex);
+    return hex;
 }
+
 
 // Get 32 bits of data from a UInt256 value.
 // Index 0 is the least significant 32 bits, index 3 is the most
