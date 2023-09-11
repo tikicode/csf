@@ -60,40 +60,42 @@ UInt256 uint256_create_from_hex(const char *hex) {
 // Return a dynamically-allocated string of hex digits representing the
 // given UInt256 value.
 char *uint256_format_as_hex(UInt256 val) {
-  char *hex = (char *)malloc(64 * sizeof(char) + 1);
+  char *hex = (char *)malloc(65 * sizeof(char));
     if (hex == NULL) {
         return NULL;
     }
 
-    int isZero = 1; 
+    int is_zero = 1;
     hex[0] = '\0'; 
 
-    for (size_t i = 7; i >= 0; --i) {
-        char temp[9];
-        sprintf(temp, "%08X", val.data[i]);
+    for (int i = 7; i >= 0; --i) {
+        char buff[9];
+        sprintf(buff, "%08X", val.data[i]);
 
-        for (size_t j = 0; j < 8; ++j) {
-            if (temp[j] != '0') {
-                isZero = 0; 
+        for (int j = 0; j < 8; ++j) {
+            if (buff[j] != '0') {
+                is_zero = 0; 
             }
 
-            if (!isZero || j == 7) {
-                char digit[2] = {temp[j], '\0'};
+            if (!is_zero || j == 7) {
+                char digit[2] = {buff[j], '\0'};
                 strcat(hex, digit);
             }
         }
     }
 
-    if (strlen(hex) == 0 || isZero) {
-        strcpy(hex, "0");
+    
+    //  if (strlen(hex) == 8) {
+    //   char buff[9];
+    //   sprintf(buff, "%x", val.data);
+    //   strcpy(hex, buff);
+    //  }
+
+    if (is_zero) {
+      strcpy(hex, "0");
     }
 
-    for (size_t i = 0; i < 8; i++) {
-      if (hex[i] != '0') {
-        //have to figure out how to substring
-      }
-    }
-
+    printf(" %s ", hex);
     return hex;
 }
 
@@ -109,7 +111,12 @@ uint32_t uint256_get_bits(UInt256 val, unsigned index) {
 // Compute the sum of two UInt256 values.
 UInt256 uint256_add(UInt256 left, UInt256 right) {
   UInt256 sum;
-  // TODO: implement
+  uint32_t carry_over = 0; \
+  for (int i = 0; i < 8; ++i) {
+      uint64_t temp_sum = (uint64_t)left.data[i] + right.data[i] + carry_over;
+      sum.data[i] = (uint32_t)temp_sum; 
+      carry_over = (uint32_t)(temp_sum >> 32); 
+  }
   return sum;
 }
 
