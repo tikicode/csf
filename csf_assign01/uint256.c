@@ -131,6 +131,8 @@ UInt256 uint256_sub(UInt256 left, UInt256 right) {
         borrow = (temp_diff >> 63) & 1;
     }
 
+    //redo subtract using negate and add.
+
     return result;
 }
 
