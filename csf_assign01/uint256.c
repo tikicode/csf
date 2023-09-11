@@ -60,43 +60,32 @@ UInt256 uint256_create_from_hex(const char *hex) {
 // Return a dynamically-allocated string of hex digits representing the
 // given UInt256 value.
 char *uint256_format_as_hex(UInt256 val) {
-  char *hex = (char *)malloc(65 * sizeof(char));
-    if (hex == NULL) {
-        return NULL;
+  char *hex = malloc(sizeof(char) * 65);
+  int index = 0;
+  for (int i = 7; i >= 0; --i) {
+    if (val.data[i] == 0 && (i != 0)) {
+      continue;
     }
-
-    int is_zero = 1;
-    hex[0] = '\0'; 
-
-    for (int i = 7; i >= 0; --i) {
-        char buff[9];
-        sprintf(buff, "%08X", val.data[i]);
-
-        for (int j = 0; j < 8; ++j) {
-            if (buff[j] != '0') {
-                is_zero = 0; 
-            }
-
-            if (!is_zero || j == 7) {
-                char digit[2] = {buff[j], '\0'};
-                strcat(hex, digit);
-            }
-        }
+    for (int j = 0; j < 8; ++j) {
+      char hex_val = '\0';
+      uint32_t buff = val.data[i] >> 28;
+      val.data[i] = val.data[i] << 4;
+      if (buff < 10) {
+        hex_val = '0' + buff;
+      } else {
+        hex_val = 'a' + buff - 10;
+      }
+      if (hex_val == '0' && index == 0) {
+        continue;
+      } else {
+        hex[index++] = hex_val;
+      }
     }
-
-    
-    //  if (strlen(hex) == 8) {
-    //   char buff[9];
-    //   sprintf(buff, "%x", val.data);
-    //   strcpy(hex, buff);
-    //  }
-
-    if (is_zero) {
-      strcpy(hex, "0");
-    }
-
-    printf(" %s ", hex);
-    return hex;
+  }
+  if (index == 0) {
+    hex[0] = '0';
+  }
+  return hex;
 }
 
 
@@ -111,7 +100,7 @@ uint32_t uint256_get_bits(UInt256 val, unsigned index) {
 // Compute the sum of two UInt256 values.
 UInt256 uint256_add(UInt256 left, UInt256 right) {
   UInt256 sum;
-  uint32_t carry_over = 0; \
+  uint32_t carry_over = 0; 
   for (int i = 0; i < 8; ++i) {
       uint64_t temp_sum = (uint64_t)left.data[i] + right.data[i] + carry_over;
       sum.data[i] = (uint32_t)temp_sum; 
@@ -123,14 +112,13 @@ UInt256 uint256_add(UInt256 left, UInt256 right) {
 // Compute the difference of two UInt256 values.
 UInt256 uint256_sub(UInt256 left, UInt256 right) {
   UInt256 result;
-    uint32_t borrow = 0;
+  uint32_t borrow = 0;
 
-    for (int i = 0; i < 8; ++i) {
-        uint64_t temp_diff = (uint64_t)left.data[i] - right.data[i] - borrow;
-        result.data[i] = (uint32_t)temp_diff;
-        borrow = (temp_diff >> 63) & 1;
-    }
-
+  for (int i = 0; i < 8; ++i) {
+    uint64_t temp_diff = (uint64_t)left.data[i] - right.data[i] - borrow;
+    result.data[i] = (uint32_t)temp_diff;
+    borrow = (temp_diff >> 63) & 1;
+  }
     //redo subtract using negate and add.
 
     return result;
@@ -139,7 +127,13 @@ UInt256 uint256_sub(UInt256 left, UInt256 right) {
 // Return the two's-complement negation of the given UInt256 value.
 UInt256 uint256_negate(UInt256 val) {
   UInt256 result;
-  // TODO: implement
+  UInt256 one;
+  for (int i = 0; i < 8; ++i) {
+    result.data[i] = ~val.data[i];
+    one.data[i] = 0;
+  }
+  one.data[0] = 1;
+  result = uint256_add(result, one);
   return result;
 }
 
@@ -148,7 +142,9 @@ UInt256 uint256_negate(UInt256 val) {
 // should be shifted back into the least significant bits.
 UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
   UInt256 result;
-  // TODO: implement
+  for (int i = 0; i < 8; ++i) {
+    result.data[i] = (val.data[i] << nbits) | (val.data[7 - i] >> (32 - nbits));
+  }
   return result;
 }
 
@@ -157,6 +153,8 @@ UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
 // should be shifted back into the most significant bits.
 UInt256 uint256_rotate_right(UInt256 val, unsigned nbits) {
   UInt256 result;
-  // TODO: implement
+  for (int i = 0; i < 8; ++i) {
+    result.data[i] = (val.data[i] >> nbits) | (val.data[7 - i] << (32 - nbits));
+  }
   return result;
 }
