@@ -57,63 +57,43 @@ UInt256 uint256_create_from_hex(const char *hex) {
   return result;
 }
 
-void removeLeadingZeros(char *str) {
-  int len = strlen(str);
-    int nonZeroIndex = -1; // Index of the first non-zero character
-    
-    // Find the first non-zero character
-    for (int i = 0; i < len; i++) {
-        if (str[i] != '0') {
-            nonZeroIndex = i;
-            break;
-        }
-    }
-
-    if (nonZeroIndex >= 0) {
-        // Shift the string to remove leading zeros
-        for (int i = 0; i < len - nonZeroIndex; i++) {
-            str[i] = str[i + nonZeroIndex];
-        }
-        str[len - nonZeroIndex] = '\0'; // Null-terminate the string
-    } else {
-        // If the string contains only zeros, leave one zero
-        str[0] = '0';
-        str[1] = '\0';
-    }
-}
-
 // Return a dynamically-allocated string of hex digits representing the
 // given UInt256 value.
 char *uint256_format_as_hex(UInt256 val) {
- char *hex = (char *)malloc(64 * sizeof(char) + 1);
+  char *hex = (char *)malloc(64 * sizeof(char) + 1);
     if (hex == NULL) {
-        // Handle memory allocation error
         return NULL;
     }
-    hex[64] = '\0';  // Null-terminate the string
 
-    // Start with an empty string
-    hex[0] = '\0';
+    int isZero = 1; 
+    hex[0] = '\0'; 
 
-    int isZero = 1; // Flag to check if all segments are zero
-
-    for (int i = 0; i < 8; i++) {
-        // Use sprintf to format and concatenate the hexadecimal values
+    for (size_t i = 7; i >= 0; --i) {
         char temp[9];
         sprintf(temp, "%08X", val.data[i]);
-        
-        // Remove leading zeros from temp
-        removeLeadingZeros(temp);
 
-        if (isZero && temp[0] != '0') {
-            isZero = 0; // Mark as non-zero when a non-zero segment is found
+        for (size_t j = 0; j < 8; ++j) {
+            if (temp[j] != '0') {
+                isZero = 0; 
+            }
+
+            if (!isZero || j == 7) {
+                char digit[2] = {temp[j], '\0'};
+                strcat(hex, digit);
+            }
         }
-
-        // Append the segment to the hex string (skip leading zeros if all segments are not zero)
-        strcat(hex, temp);
     }
 
-    printf(" %s ", hex);
+    if (strlen(hex) == 0 || isZero) {
+        strcpy(hex, "0");
+    }
+
+    for (size_t i = 0; i < 8; i++) {
+      if (hex[i] != '0') {
+        //have to figure out how to substring
+      }
+    }
+
     return hex;
 }
 
