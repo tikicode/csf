@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -137,12 +138,44 @@ UInt256 uint256_negate(UInt256 val) {
 // the left.  Any bits shifted past the most significant bit
 // should be shifted back into the least significant bits.
 UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
-  UInt256 result;
+  UInt256 result = val;
   nbits = nbits % 256;
-  for (int i = 0; i < 8; ++i) {
-    result.data[i] = (val.data[i] << nbits) | (val.data[7 - i] >> (32 - nbits));
+  size_t full_shifts = nbits/32;
+
+  //UInt256 temp = val;
+
+  for (size_t i = 0; i < 8; ++i) {
+    size_t new_index;
+    if ((i + full_shifts) > 7) {
+      new_index = (i + full_shifts)%8;
+    } else {
+      new_index = i + full_shifts;
+    }
+    result.data[new_index] = val.data[i];
   }
+
+  size_t remainder = nbits % 32;
+  if (!(remainder > 0)) {
+    return result;
+  }
+
+  uint32_t extra = 0;
+  uint32_t temp;
+  for (size_t i = 0; i < 8; ++i) {
+    temp = result.data[i];
+    result.data[i] = (val.data[i] << remainder) | extra;
+    extra = temp >> (32-remainder);
+  }
+  result.data[0] = result.data[0] | extra;
+
   return result;
+  
+
+
+  // for (int i = 0; i < 8; ++i) {
+  //   result.data[i] = (val.data[i] << nbits) | (val.data[7 - i] >> (32 - nbits));
+  // }
+  // return result;
 }
 
 // Return the result of rotating every bit in val nbits to
