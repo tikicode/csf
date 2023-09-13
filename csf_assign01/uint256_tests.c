@@ -180,6 +180,10 @@ void test_format_as_hex(TestObjs *objs) {
   s = uint256_format_as_hex(objs->max);
   ASSERT(0 == strcmp("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", s));
   free(s);
+
+  s = uint256_format_as_hex(uint256_create_from_hex("abc"));
+  ASSERT(0 == strcmp("abc", s));
+  free(s);
 }
 
 void test_add(TestObjs *objs) {
@@ -247,6 +251,18 @@ void test_rotate_left(TestObjs *objs) {
   ASSERT(0U == result.data[5]);
   ASSERT(0U == result.data[6]);
   ASSERT(0xD0000000U == result.data[7]);
+
+  // perform the above test, rotating the "rot" value left by 260 bits which should 
+  // be equivalent to rotating left by 4 bits
+  result = uint256_rotate_left(objs->rot, 260);
+  ASSERT(0x00000ABCU == result.data[0]);
+  ASSERT(0U == result.data[1]);
+  ASSERT(0U == result.data[2]);
+  ASSERT(0U == result.data[3]);
+  ASSERT(0U == result.data[4]);
+  ASSERT(0U == result.data[5]);
+  ASSERT(0U == result.data[6]);
+  ASSERT(0xD0000000U == result.data[7]);
 }
 
 void test_rotate_right(TestObjs *objs) {
@@ -260,6 +276,18 @@ void test_rotate_right(TestObjs *objs) {
   // after rotating the "rot" value right by 4 bits, the resulting value should be
   //   BCD00000 00000000 00000000 00000000 00000000 00000000 00000000 0000000A
   result = uint256_rotate_right(objs->rot, 4);
+  ASSERT(0x0000000AU == result.data[0]);
+  ASSERT(0U == result.data[1]);
+  ASSERT(0U == result.data[2]);
+  ASSERT(0U == result.data[3]);
+  ASSERT(0U == result.data[4]);
+  ASSERT(0U == result.data[5]);
+  ASSERT(0U == result.data[6]);
+  ASSERT(0xBCD00000U == result.data[7]);
+
+  // perform the above test, rotating the "rot" value right by 260 bits which should
+  // be equivalent to rotating left by 4 bits
+  result = uint256_rotate_right(objs->rot, 260);
   ASSERT(0x0000000AU == result.data[0]);
   ASSERT(0U == result.data[1]);
   ASSERT(0U == result.data[2]);
