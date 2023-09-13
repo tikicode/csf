@@ -135,10 +135,23 @@ UInt256 uint256_negate(UInt256 val) {
 // should be shifted back into the least significant bits.
 UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
   UInt256 result;
-  for (int i = 0; i < 8; ++i) {
-    result.data[i] = (val.data[i] << nbits) | (val.data[7 - i] >> (32 - nbits));
-  }
-  return result;
+    if (nbits < 0) {
+        nbits = (nbits % 256 + 256) % 256;
+    }
+    int shift_positions = nbits % 256;
+    int shift_chunks = shift_positions / 32;
+    int shift_within_chunk = shift_positions % 32;
+
+    for (int i = 0; i < 8; ++i) {
+        int next_chunk = (i + shift_chunks) % 8;
+        int prev_chunk = (i + 8 - shift_chunks) % 8;
+
+        uint32_t shifted_value = (val.data[next_chunk] << shift_within_chunk) | (val.data[prev_chunk] >> (32 - shift_within_chunk));
+
+        result.data[i] = shifted_value;
+    }
+
+    return result;
 }
 
 // Return the result of rotating every bit in val nbits to
