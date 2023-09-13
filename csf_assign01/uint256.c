@@ -61,31 +61,36 @@ UInt256 uint256_create_from_hex(const char *hex) {
 // given UInt256 value.
 char *uint256_format_as_hex(UInt256 val) {
   char *hex = malloc(sizeof(char) * 65);
-  int index = 0;
-  for (int i = 7; i >= 0; --i) {
-    if (val.data[i] == 0 && (i != 0)) {
-      continue;
+    int index = 0;
+    int non_zero_found = 0;
+
+    for (int i = 7; i >= 0; --i) {
+        for (int j = 7; j >= 0; --j) {
+            char hex_val = '\0';
+            uint32_t buff = (val.data[i] >> (j * 4)) & 0xF;
+
+            if (buff < 10) {
+                hex_val = '0' + buff;
+            } else {
+                hex_val = 'a' + buff - 10;
+            }
+
+            if (hex_val == '0' && !non_zero_found) {
+                continue;
+            } else {
+                hex[index++] = hex_val;
+                non_zero_found = 1;
+            }
+        }
     }
-    for (int j = 0; j < 8; ++j) {
-      char hex_val = '\0';
-      uint32_t buff = val.data[i] >> 28;
-      val.data[i] = val.data[i] << 4;
-      if (buff < 10) {
-        hex_val = '0' + buff;
-      } else {
-        hex_val = 'a' + buff - 10;
-      }
-      if (hex_val == '0' && index == 0) {
-        continue;
-      } else {
-        hex[index++] = hex_val;
-      }
+
+    if (index == 0) {
+        hex[0] = '0';
+        hex[1] = '\0';
+    } else {
+        hex[index] = '\0';
     }
-  }
-  if (index == 0) {
-    hex[0] = '0';
-  }
-  return hex;
+    return hex;
 }
 
 
