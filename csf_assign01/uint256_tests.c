@@ -164,6 +164,13 @@ void test_create_from_hex(TestObjs *objs) {
 
   UInt256 max = uint256_create_from_hex("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
   ASSERT_SAME(objs->max, max);
+
+  // Test more than 64 character hex conversions
+  UInt256 max_65 = uint256_create_from_hex("affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+  ASSERT_SAME(objs->max, max_65);
+
+  UInt256 max_129 = uint256_create_from_hex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+  ASSERT_SAME(objs->max, max_129);
 }
 
 void test_format_as_hex(TestObjs *objs) {
@@ -263,6 +270,10 @@ void test_rotate_left(TestObjs *objs) {
   ASSERT(0U == result.data[5]);
   ASSERT(0U == result.data[6]);
   ASSERT(0xD0000000U == result.data[7]);
+
+  // after rotating right by 0 bits, the resulting value should be the same
+  result = uint256_rotate_left(objs->one, 0);
+  ASSERT_SAME(objs->one, result);
 }
 
 void test_rotate_right(TestObjs *objs) {
@@ -296,4 +307,8 @@ void test_rotate_right(TestObjs *objs) {
   ASSERT(0U == result.data[5]);
   ASSERT(0U == result.data[6]);
   ASSERT(0xBCD00000U == result.data[7]);
+
+  // after rotating right by 0 bits, the resulting value should be the same
+  result = uint256_rotate_right(objs->one, 0);
+  ASSERT_SAME(objs->one, result);
 }
