@@ -153,6 +153,8 @@ UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
 UInt256 uint256_rotate_right(UInt256 val, unsigned nbits) {
   UInt256 result;
   nbits = nbits % 256;
+
+  size_t full_rotations = nbits/32;
   for (int i = 0; i < 8; ++i) {
     result.data[i] = (val.data[i] >> nbits) | (val.data[7 - i] << (32 - nbits));
   }
