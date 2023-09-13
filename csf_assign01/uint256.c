@@ -169,25 +169,12 @@ UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
   result.data[0] = result.data[0] | extra;
 
   return result;
-  
-
-
-  // for (int i = 0; i < 8; ++i) {
-  //   result.data[i] = (val.data[i] << nbits) | (val.data[7 - i] >> (32 - nbits));
-  // }
-  // return result;
 }
 
 // Return the result of rotating every bit in val nbits to
 // the right. Any bits shifted past the least significant bit
 // should be shifted back into the most significant bits.
 UInt256 uint256_rotate_right(UInt256 val, unsigned nbits) {
-  UInt256 result;
   nbits = nbits % 256;
-
-  size_t full_rotations = nbits/32;
-  for (int i = 0; i < 8; ++i) {
-    result.data[i] = (val.data[i] >> nbits) | (val.data[7 - i] << (32 - nbits));
-  }
-  return result;
+  return uint256_rotate_left(val, 256 - nbits);
 }
