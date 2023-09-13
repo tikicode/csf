@@ -100,17 +100,13 @@ uint32_t uint256_get_bits(UInt256 val, unsigned index) {
 // Compute the sum of two UInt256 values.
 UInt256 uint256_add(UInt256 left, UInt256 right) {
   UInt256 sum;
-    uint32_t carry_over = 0; 
-    for (int i = 0; i < 8; ++i) {
-        uint64_t temp_sum = (uint64_t)left.data[i] + right.data[i] + carry_over;
-        sum.data[i] = (uint32_t)temp_sum;
-        // Check for overflow
-        if (temp_sum >> 32) {
-            return sum; // Return 0 on overflow
-        }
-        carry_over = (uint32_t)(temp_sum >> 32);
-    }
-    return sum;
+  uint32_t carry_over = 0; 
+  for (int i = 0; i < 8; ++i) {
+      uint64_t temp_sum = (uint64_t)left.data[i] + right.data[i] + carry_over;
+      sum.data[i] = (uint32_t)temp_sum; 
+      carry_over = (uint32_t)(temp_sum >> 32); 
+  }
+  return sum;
 }
 
 // Compute the difference of two UInt256 values.
@@ -139,6 +135,7 @@ UInt256 uint256_negate(UInt256 val) {
 // should be shifted back into the least significant bits.
 UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
   UInt256 result;
+  nbits = nbits % 256;
   for (int i = 0; i < 8; ++i) {
     result.data[i] = (val.data[i] << nbits) | (val.data[7 - i] >> (32 - nbits));
   }
@@ -150,6 +147,7 @@ UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
 // should be shifted back into the most significant bits.
 UInt256 uint256_rotate_right(UInt256 val, unsigned nbits) {
   UInt256 result;
+  nbits = nbits % 256;
   for (int i = 0; i < 8; ++i) {
     result.data[i] = (val.data[i] >> nbits) | (val.data[7 - i] << (32 - nbits));
   }
