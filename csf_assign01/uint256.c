@@ -104,7 +104,6 @@ UInt256 uint256_add(UInt256 left, UInt256 right) {
     for (int i = 0; i < 8; ++i) {
         uint64_t temp_sum = (uint64_t)left.data[i] + right.data[i] + carry_over;
         sum.data[i] = (uint32_t)temp_sum;
-
         // Check for overflow
         if (temp_sum >> 32) {
             return sum; // Return 0 on overflow
