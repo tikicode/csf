@@ -48,6 +48,12 @@ void test_sub(TestObjs *objs);
 void test_negate(TestObjs *objs);
 void test_rotate_left(TestObjs *objs);
 void test_rotate_right(TestObjs *objs);
+void test_format_as_hex_between_zero_and_max();
+void test_rotate_left_greater_than_256(TestObjs *objs);
+void test_rotate_left_zero_bits(TestObjs *objs);
+void test_rotate_right_greater_than_256(TestObjs *objs);
+void test_rotate_right_zero_bits(TestObjs *objs);
+void test_add_maxes(TestObjs *objs);
 
 int main(int argc, char **argv) {
   if (argc > 1) {
@@ -66,6 +72,14 @@ int main(int argc, char **argv) {
   TEST(test_negate);
   TEST(test_rotate_left);
   TEST(test_rotate_right);
+
+  TEST(test_format_as_hex_between_zero_and_max);
+  TEST(test_format_as_hex_between_zero_and_max);
+  TEST(test_rotate_left_greater_than_256);
+  TEST(test_rotate_left_zero_bits);
+  TEST(test_rotate_right_greater_than_256);
+  TEST(test_rotate_right_zero_bits);
+  TEST(test_add_maxes);
 
   TEST_FINI();
 }
@@ -187,6 +201,10 @@ void test_format_as_hex(TestObjs *objs) {
   s = uint256_format_as_hex(objs->max);
   ASSERT(0 == strcmp("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", s));
   free(s);
+}
+
+void test_format_as_hex_between_zero_and_max() {
+  char *s;
 
   s = uint256_format_as_hex(uint256_create_from_hex("abc"));
   ASSERT(0 == strcmp("abc", s));
@@ -210,6 +228,13 @@ void test_add(TestObjs *objs) {
 
   result = uint256_add(objs->max, objs->one);
   ASSERT_SAME(objs->zero, result);
+}
+
+void test_add_maxes(TestObjs *objs) {
+  UInt256 result;
+
+  result = uint256_add(objs->max, objs->max);
+  ASSERT_SAME(uint256_create_from_hex("fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"), result);
 }
 
 void test_sub(TestObjs *objs) {
@@ -258,6 +283,10 @@ void test_rotate_left(TestObjs *objs) {
   ASSERT(0U == result.data[5]);
   ASSERT(0U == result.data[6]);
   ASSERT(0xD0000000U == result.data[7]);
+}
+
+void test_rotate_left_greater_than_256(TestObjs *objs) {
+  UInt256 result;
 
   // perform the above test, rotating the "rot" value left by 260 bits which should 
   // be equivalent to rotating left by 4 bits
@@ -270,6 +299,10 @@ void test_rotate_left(TestObjs *objs) {
   ASSERT(0U == result.data[5]);
   ASSERT(0U == result.data[6]);
   ASSERT(0xD0000000U == result.data[7]);
+}
+
+void test_rotate_left_zero_bits(TestObjs *objs) {
+  UInt256 result;
 
   // after rotating right by 0 bits, the resulting value should be the same
   result = uint256_rotate_left(objs->one, 0);
@@ -295,6 +328,10 @@ void test_rotate_right(TestObjs *objs) {
   ASSERT(0U == result.data[5]);
   ASSERT(0U == result.data[6]);
   ASSERT(0xBCD00000U == result.data[7]);
+}
+
+void test_rotate_right_greater_than_256(TestObjs *objs) {
+  UInt256 result;
 
   // perform the above test, rotating the "rot" value right by 260 bits which should
   // be equivalent to rotating left by 4 bits
@@ -307,6 +344,10 @@ void test_rotate_right(TestObjs *objs) {
   ASSERT(0U == result.data[5]);
   ASSERT(0U == result.data[6]);
   ASSERT(0xBCD00000U == result.data[7]);
+}
+
+void test_rotate_right_zero_bits(TestObjs *objs) {
+  UInt256 result;
 
   // after rotating right by 0 bits, the resulting value should be the same
   result = uint256_rotate_right(objs->one, 0);

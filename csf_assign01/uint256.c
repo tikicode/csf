@@ -30,11 +30,8 @@ UInt256 uint256_create(const uint32_t data[8]) {
 // Create a UInt256 value from a string of hexadecimal digits.
 UInt256 uint256_create_from_hex(const char *hex) {
 UInt256 result = {0,0,0,0,0,0,0,0};
-
 int len = strlen(hex);
-
 int iters = 8;
-
 
 if (len % 8 != 0) {
   if ((len / 8 + 1) < iters) {
@@ -137,44 +134,49 @@ UInt256 uint256_negate(UInt256 val) {
 // Return the result of rotating every bit in val nbits to
 // the left.  Any bits shifted past the most significant bit
 // should be shifted back into the least significant bits.
+
+UInt256 rotate_one_left(UInt256 result) {
+  uint32_t temp = 0;
+  uint32_t next_temp = (result.data[7] & (1 << 31)) >> 31;
+  for (size_t i = 0; i < 8; ++i) {
+    temp = (result.data[i] & (1 << 31)) >> 31;
+    result.data[i] = result.data[i] << 1;
+    result.data[i] |= next_temp;
+    next_temp = temp;
+  }
+  return result;
+}
+
 UInt256 uint256_rotate_left(UInt256 val, unsigned nbits) {
-  UInt256 result = val;
+  UInt256 result = uint256_create(val.data);
   nbits = nbits % 256;
-  size_t full_shifts = nbits/32;
-
-  //UInt256 temp = val;
-
-  for (size_t i = 0; i < 8; ++i) {
-    size_t new_index;
-    if ((i + full_shifts) > 7) {
-      new_index = (i + full_shifts)%8;
-    } else {
-      new_index = i + full_shifts;
-    }
-    result.data[new_index] = val.data[i];
+  for (size_t i = 0; i < nbits; i++) {
+    result = rotate_one_left(result);
   }
-
-  size_t remainder = nbits % 32;
-  if (!(remainder > 0)) {
-    return result;
-  }
-
-  uint32_t extra = 0;
-  uint32_t temp;
-  for (size_t i = 0; i < 8; ++i) {
-    temp = result.data[i];
-    result.data[i] = (val.data[i] << remainder) | extra;
-    extra = temp >> (32-remainder);
-  }
-  result.data[0] = result.data[0] | extra;
-
   return result;
 }
 
 // Return the result of rotating every bit in val nbits to
 // the right. Any bits shifted past the least significant bit
 // should be shifted back into the most significant bits.
+
+UInt256 rotate_one_right(UInt256 result) {
+  uint32_t temp = 0;
+  uint32_t next_temp = (result.data[0] & 1) << 31;
+  for (int i = 7; i >= 0; i--) {
+    temp = (result.data[i] & 1) << 31;
+    result.data[i] = result.data[i] >> 1;
+    result.data[i] |= next_temp;
+    next_temp = temp;
+  }
+  return result;
+}
+
 UInt256 uint256_rotate_right(UInt256 val, unsigned nbits) {
+  UInt256 result = uint256_create(val.data);
   nbits = nbits % 256;
-  return uint256_rotate_left(val, 256 - nbits);
+  for (size_t i = 0; i < nbits; ++i) {
+    result = rotate_one_right(result);
+  }
+  return result;
 }
