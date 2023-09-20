@@ -29,28 +29,28 @@ UInt256 uint256_create(const uint32_t data[8]) {
 
 // Create a UInt256 value from a string of hexadecimal digits.
 UInt256 uint256_create_from_hex(const char *hex) {
-UInt256 result = {0,0,0,0,0,0,0,0};
-int len = strlen(hex);
-int iters = 8;
+  UInt256 result = {0,0,0,0,0,0,0,0};
+  int len = strlen(hex);
+  int iters = 8;
 
-if (len % 8 != 0) {
-  if ((len / 8 + 1) < iters) {
-    iters = len / 8 + 1;
+  if (len % 8 != 0) {
+    if ((len / 8 + 1) < iters) {
+      iters = len / 8 + 1;
+    }
+  } else {
+    if (len / 8 < iters)
+      iters = len / 8;
   }
-} else {
-  if (len / 8 < iters)
-    iters = len / 8;
-}
 
-for (int i = 1; i <= iters; i++) {
-  char buffer[8];
-  for (int j = 7; j >= 0; j--){
-    buffer[j] = (len - i * 8) + j >= 0 ? hex[(len - i * 8) + j] : '0';
+  for (int i = 1; i <= iters; i++) {
+    char buffer[8];
+    for (int j = 7; j >= 0; j--){
+      buffer[j] = (len - i * 8) + j >= 0 ? hex[(len - i * 8) + j] : '0';
+    }
+    result.data[i - 1] = (uint32_t)strtoul(buffer, NULL, 16);
   }
-  result.data[i - 1] = (uint32_t)strtoul(buffer, NULL, 16);
-}
 
-return result;
+  return result;
 }
 
 // Return a dynamically-allocated string of hex digits representing the
