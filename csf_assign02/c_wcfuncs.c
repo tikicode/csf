@@ -140,7 +140,7 @@ void wc_tolower(unsigned char *w) {
       if (*w <= 90 && *w >= 65)
         *w += 32;
     }
-    *w++;
+    w++;
   }
 }
 
@@ -148,9 +148,9 @@ void wc_tolower(unsigned char *w) {
 // NUL-terminated character string pointed-to by w.
 void wc_trim_non_alpha(unsigned char *w) {
   while(*w) {
-    *w++;
+    w++;
   }
-  *w--;
+  w--;
   while(*w) {
     if (wc_isalpha(*w))
       break;
