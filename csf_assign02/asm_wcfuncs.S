@@ -37,7 +37,7 @@
  */
 	.globl wc_hash
 wc_hash:
-	/* TODO: implement */
+/* TODO: implement */
 	ret
 
 /*
@@ -89,9 +89,31 @@ wc_str_copy:
  */
 	.globl wc_isspace
 wc_isspace:
-	/* TODO: implement */
-	ret
+	// input is al (8 bit char register)
+	cmp al, 32		// check if char is a space ' '
+	je is_space		// jump to is_space and return 1
 
+	cmp al, 9 		// check if char is a tab '\t'
+	je is_space		// jump to is_space and return 1
+
+	cmp al, 13		// check if char is a carriage return '\r'
+	je is_space		// jump to is_space and return 1
+
+	cmp al, 10		// check if char is a newline '\n'
+	je is_space		// jump to is_space and return 1
+
+	cmp al, 12		// check if char is a form feed '\f'
+	je is_space		// jump to is_space and return 1
+
+	cmp al, 11		// check if char is a vertical tab '\v'
+	je is_space		// jump to is_space and return 1
+
+	mov eax, 0		// if not space, move 0 to eax
+	ret				// return 0
+
+is_space:
+	mov eax, 1		// if space, move 1 to eax
+	ret				// return 1
 /*
  * Return 1 if the character code in c is an alphabetic character
  * ('A' through 'Z' or 'a' through 'z'), 0 otherwise.
@@ -200,5 +222,5 @@ wc_free_chain:
 	ret
 
 /*
-vim:ft=gas:
+vim:ft=asm:
 */

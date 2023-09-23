@@ -117,8 +117,10 @@ int wc_isalpha(unsigned char c) {
 int wc_readnext(FILE *in, unsigned char *w) {
   int i = 0; int c;
   while((c = fgetc(in)) != EOF) {
-    if (i == MAX_WORDLEN)
+    if (i == MAX_WORDLEN) {
+      i++;
       break;
+    }
     c = (unsigned char) c;
     if (c == EOF)
       return 0;
