@@ -123,7 +123,24 @@ is_space:
  */
 	.globl wc_isalpha
 wc_isalpha:
-	/* TODO: implement */
+	cmp al, 65
+	jl is_not_alpha
+
+	cmp al, 90
+	jl is_alpha
+
+	cmp al, 97
+	jl is_not_alpha
+
+	cmp al, 122
+	jl is_alpha
+
+is_alpha:
+	mov eax, 1
+	ret	
+
+is_not_alpha:
+	mov eax, 0
 	ret
 
 /*
