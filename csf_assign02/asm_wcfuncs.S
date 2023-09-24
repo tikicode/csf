@@ -124,31 +124,34 @@ wc_str_copy:
  */
 	.globl wc_isspace
 wc_isspace:
-	// input is al (8 bit char register)
-	cmp $32, %al		// check if char is a space ' '
-	je is_space		// jump to is_space and return 1
+    // input is dil (8 bit of rdi register)
+    cmp $32, %dil   // check if char is a space ' '
+    je is_space     // jump to is_space and return 1
 
-	cmp $9, %al 		// check if char is a tab '\t'
-	je is_space		// jump to is_space and return 1
+    cmp $9, %dil    // check if char is a tab '\t'
+    je is_space     // jump to is_space and return 1
 
-	cmp $13, %al 	// check if char is a carriage return '\r'
-	je is_space		// jump to is_space and return 1
+    cmp $13, %dil   // check if char is a carriage return '\r'
+    je is_space     // jump to is_space and return 1
 
-	cmp $10, %al		// check if char is a newline '\n'
-	je is_space		// jump to is_space and return 1
+    cmp $10, %dil   // check if char is a newline '\n'
+    je is_space     // jump to is_space and return 1
 
-	cmp $12, %al		// check if char is a form feed '\f'
-	je is_space		// jump to is_space and return 1
+    cmp $12, %dil   // check if char is a form feed '\f'
+    je is_space     // jump to is_space and return 1
 
-	cmp $11, %al		// check if char is a vertical tab '\v'
-	je is_space		// jump to is_space and return 1
+    cmp $11, %dil   // check if char is a vertical tab '\v'
+    je is_space     // jump to is_space and return 1
 
-	mov $0, %eax	// if not space, move 0 to eax
-	ret				// return 0
+    mov $0, %eax    // if not space, move 0 to eax
+    ret             // return 0
 
 is_space:
-	mov $1, %eax	// if space, move 1 to eax
-	ret				// return 1
+    mov $1, %eax    // if space, move 1 to eax
+    ret             // return 1
+
+
+
 /*
  * Return 1 if the character code in c is an alphabetic character
  * ('A' through 'Z' or 'a' through 'z'), 0 otherwise.
@@ -156,31 +159,31 @@ is_space:
  * C function prototype:
  *    int wc_isalpha(unsigned char c);
  */
-	.globl wc_isalpha
+    .globl wc_isalpha
 wc_isalpha:
-	// Comparing value with 65 ('A')
-	cmpb $65, %al 
-	jl is_not_alpha		// If less, jump to not alpha
+    // Comparing value with 65 ('A')
+    cmp $65, %dil 
+    jl is_not_alpha      // If less, jump to not alpha
 
-	// Comparing value with 90 ('Z')
-	cmpb $90, %al 
-	jle is_alpha 	// If less than or equal, jump to alpha
+    // Comparing value with 90 ('Z')
+    cmp $90, %dil 
+    jle is_alpha         // If less than or equal, jump to alpha
 
-	// Comparing value with 97 ('a')
-	cmpb $97, %al 
-	jl is_not_alpha 	// If less, jump to not alpha
+    // Comparing value with 97 ('a')
+    cmp $97, %dil 
+    jl is_not_alpha      // If less, jump to not alpha
 
-	// Comparing value with 122 ('z')
-	cmpb $122, %al 
-	jle is_alpha 	// If less than or equal, jump to alpha
+    // Comparing value with 122 ('z')
+    cmp $122, %dil 
+    jg is_not_alpha      // If greater, jump to not alpha
 
 is_alpha:
-	movl $1, %eax 	// Move 1 to eax
-	ret	// Return 1
+    mov $1, %eax        // Move 1 to eax
+    ret                 // Return 1
 
 is_not_alpha:
-	movl $0, %eax 	// Move 0 to eax
-	ret 	// Return 0
+    mov $0, %eax        // Move 0 to eax
+    ret                 // Return 0
 
 
 
