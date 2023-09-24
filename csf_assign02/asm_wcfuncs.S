@@ -127,13 +127,13 @@ wc_isalpha:
 	jl is_not_alpha
 
 	cmp al, 90
-	jl is_alpha
+	jle is_alpha
 
 	cmp al, 97
 	jl is_not_alpha
 
 	cmp al, 122
-	jl is_alpha
+	jle is_alpha
 
 is_alpha:
 	mov eax, 1
