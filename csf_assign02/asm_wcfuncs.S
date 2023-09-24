@@ -58,25 +58,40 @@ wc_hash:
 	.globl wc_str_compare
 wc_str_compare:
     .loop:
+        // Load a byte from the addresses in rdi and rsi into registers al and bl respectively
         movb (%rdi), %al
         movb (%rsi), %bl
+        // Compare the bytes in al and bl
         cmpb %bl, %al
-        jne .is_difference
+        // If they are not equal, jump to .is_difference
+        jne .is_difference 
+        // Test if the end of the string (NULL character) is reached
         testb %al, %al
-        jz .equal
+        // If NULL is reached, jump to .equal
+        jz .equal 
+        // Increment the string pointers (rdi and rsi)
         incq %rdi
         incq %rsi
+        // Jump back to .loop to compare the next characters
         jmp .loop
 
     .is_difference:
+        // Move the zero extended values of al and bl into eax and ebx respectively
         movzbl %al, %eax
         movzbl %bl, %ebx
+        // Subtract the value in ebx from eax
         subl %ebx, %eax
+        // Return the result
         ret
 
     .equal:
+        // Set the return value to 0 (strings are equal)
         xorl %eax, %eax
         ret
+
+
+
+
 
 
 
@@ -145,27 +160,27 @@ is_space:
 wc_isalpha:
 	// Comparing value with 65 ('A')
 	cmpb $65, %al 
-	jl is_not_alpha // If less, jump to not alpha
+	jl is_not_alpha		// If less, jump to not alpha
 
 	// Comparing value with 90 ('Z')
 	cmpb $90, %al 
-	jle is_alpha // If less than or equal, jump to alpha
+	jle is_alpha 	// If less than or equal, jump to alpha
 
 	// Comparing value with 97 ('a')
 	cmpb $97, %al 
-	jl is_not_alpha // If less, jump to not alpha
+	jl is_not_alpha 	// If less, jump to not alpha
 
 	// Comparing value with 122 ('z')
 	cmpb $122, %al 
-	jle is_alpha // If less than or equal, jump to alpha
+	jle is_alpha 	// If less than or equal, jump to alpha
 
 is_alpha:
-	movl $1, %eax // Move 1 to eax
+	movl $1, %eax 	// Move 1 to eax
 	ret	// Return 1
 
 is_not_alpha:
-	movl $0, %eax // Move 0 to eax
-	ret // Return 0
+	movl $0, %eax 	// Move 0 to eax
+	ret 	// Return 0
 
 
 
