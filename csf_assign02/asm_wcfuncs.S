@@ -57,8 +57,28 @@ wc_hash:
  */
 	.globl wc_str_compare
 wc_str_compare:
-	/* TODO: implement */
-	ret
+    .loop:
+        movb (%rdi), %al
+        movb (%rsi), %bl
+        cmpb %bl, %al
+        jne .is_difference
+        testb %al, %al
+        jz .equal
+        incq %rdi
+        incq %rsi
+        jmp .loop
+
+    .is_difference:
+        movzbl %al, %eax
+        movzbl %bl, %ebx
+        subl %ebx, %eax
+        ret
+
+    .equal:
+        xorl %eax, %eax
+        ret
+
+
 
 /*
  * Copy NUL-terminated source string to the destination buffer.
@@ -90,29 +110,29 @@ wc_str_copy:
 	.globl wc_isspace
 wc_isspace:
 	// input is al (8 bit char register)
-	cmp al, 32		// check if char is a space ' '
+	cmp $32, %al		// check if char is a space ' '
 	je is_space		// jump to is_space and return 1
 
-	cmp al, 9 		// check if char is a tab '\t'
+	cmp $9, %al 		// check if char is a tab '\t'
 	je is_space		// jump to is_space and return 1
 
-	cmp al, 13		// check if char is a carriage return '\r'
+	cmp $13, %al 	// check if char is a carriage return '\r'
 	je is_space		// jump to is_space and return 1
 
-	cmp al, 10		// check if char is a newline '\n'
+	cmp $10, %al		// check if char is a newline '\n'
 	je is_space		// jump to is_space and return 1
 
-	cmp al, 12		// check if char is a form feed '\f'
+	cmp $12, %al		// check if char is a form feed '\f'
 	je is_space		// jump to is_space and return 1
 
-	cmp al, 11		// check if char is a vertical tab '\v'
+	cmp $11, %al		// check if char is a vertical tab '\v'
 	je is_space		// jump to is_space and return 1
 
-	mov eax, 0		// if not space, move 0 to eax
+	mov $0, %eax	// if not space, move 0 to eax
 	ret				// return 0
 
 is_space:
-	mov eax, 1		// if space, move 1 to eax
+	mov $1, %eax	// if space, move 1 to eax
 	ret				// return 1
 /*
  * Return 1 if the character code in c is an alphabetic character
@@ -123,25 +143,31 @@ is_space:
  */
 	.globl wc_isalpha
 wc_isalpha:
-	cmp al, 65
-	jl is_not_alpha
+	// Comparing value with 65 ('A')
+	cmpb $65, %al 
+	jl is_not_alpha // If less, jump to not alpha
 
-	cmp al, 90
-	jle is_alpha
+	// Comparing value with 90 ('Z')
+	cmpb $90, %al 
+	jle is_alpha // If less than or equal, jump to alpha
 
-	cmp al, 97
-	jl is_not_alpha
+	// Comparing value with 97 ('a')
+	cmpb $97, %al 
+	jl is_not_alpha // If less, jump to not alpha
 
-	cmp al, 122
-	jle is_alpha
+	// Comparing value with 122 ('z')
+	cmpb $122, %al 
+	jle is_alpha // If less than or equal, jump to alpha
 
 is_alpha:
-	mov eax, 1
-	ret	
+	movl $1, %eax // Move 1 to eax
+	ret	// Return 1
 
 is_not_alpha:
-	mov eax, 0
-	ret
+	movl $0, %eax // Move 0 to eax
+	ret // Return 0
+
+
 
 /*
  * Read the next word from given input stream, storing
