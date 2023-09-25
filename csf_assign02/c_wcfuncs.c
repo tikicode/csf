@@ -40,8 +40,8 @@ uint32_t wc_hash(const unsigned char *w) {
 // "hi" would compare as less than "high".
 int wc_str_compare(const unsigned char *lhs, const unsigned char *rhs) {
   while (*lhs && *rhs) {
-    char lhs_c = *lhs++;
-    char rhs_c = *rhs++;
+    unsigned char lhs_c = *lhs++;
+    unsigned char rhs_c = *rhs++;
     if (lhs_c < rhs_c)
       return -1;
     if (rhs_c < lhs_c)
@@ -117,9 +117,9 @@ int wc_isalpha(unsigned char c) {
 int wc_readnext(FILE *in, unsigned char *w) {
   int i = 0; int c;
   while ((c = fgetc(in)) != EOF && wc_isspace(c));
-  if (c == EOF) {
+  if (c == EOF && i == 0) { 
     return 0;
-  }
+    }
   w[i++] = (unsigned char)c;
   while(i < MAX_WORDLEN && (c = fgetc(in)) != EOF && !wc_isspace(c)) {
     w[i++] = (unsigned char)c;
@@ -148,8 +148,8 @@ void wc_trim_non_alpha(unsigned char *w) {
   }
   w--;
   while(*w) {
-    if (wc_isalpha(*w))
-      break;
+    if ((*w >= 'A' && *w <= 'Z') || (*w >= 'a' && *w <= 'z'))
+        break;
     *w-- = '\0';
   }
 }

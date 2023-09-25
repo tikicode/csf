@@ -16,12 +16,18 @@ int main(int argc, char **argv) {
 
   // handle error and return nonzero value if
   // more than two arguments are supplied
+  FILE *input;
+  
   if (argc > 2) {
     fprintf(stderr, "Too many arguments supplied");
     return -1;
+  } else if (argc < 2) {
+    input = stdin;
+  } else {
+    input = fopen(argv[1], "r");
   }
 
-  FILE *input = fopen(argv[1], "r");
+  
 
   // handle error and return nonzero value if
   // the input file is invalid
