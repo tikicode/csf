@@ -85,7 +85,7 @@ wc_str_compare:
         ret
 
     .equal:
-        // Set the return value to 0 (strings are equal)
+        // Set the return value to 0
         xorl %eax, %eax
         ret
 
