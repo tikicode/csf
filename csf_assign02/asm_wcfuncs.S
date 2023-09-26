@@ -57,42 +57,35 @@ wc_hash:
  */
 	.globl wc_str_compare
 wc_str_compare:
-    .loop:
-        // Load a byte from the addresses in rdi and rsi into registers al and bl respectively
-        movb (%rdi), %al
+    .loop:                  // loop condition to parse through string until the NULL char is found
+        movb (%rdi), %al    // load a byte from the addresses in rdi and rsi into registers al and bl respectively
         movb (%rsi), %bl
-        // Compare the bytes in al and bl
-        cmpb %bl, %al
-        // If they are not equal, jump to .is_difference
-        jne .is_difference 
-        // Test if the end of the string (NULL character) is reached
-        testb %al, %al
-        // If NULL is reached, jump to .equal
-        jz .equal 
-        // Increment the string pointers (rdi and rsi)
-        incq %rdi
+        cmpb %bl, %al       // compare the bytes in al and bl
+
+        jne .is_difference  // if they are not equal, jump to .is_difference
+
+        testb %al, %al      // test if the end of the string (NULL character) is reached
+
+        jz .equal           // if NULL is reached, jump to .equal
+
+        incq %rdi           // increment the string pointers (rdi and rsi)
         incq %rsi
-        // Jump back to .loop to compare the next characters
-        jmp .loop
+
+        jmp .loop           // jump back to .loop to compare the next characters
 
     .is_difference:
-        // Move the zero extended values of al and bl into eax and ebx respectively
-        movzbl %al, %eax
+
+        movzbl %al, %eax    // move the zero extended values of al and bl into eax and ebx respectively
         movzbl %bl, %ebx
-        // Subtract the value in ebx from eax
-        subl %ebx, %eax
-        // Return the result
-        ret
+
+        subl %ebx, %eax     // subtract the value in ebx from eax
+
+        ret                 // return the result
 
     .equal:
-        // Set the return value to 0
-        xorl %eax, %eax
-        ret
 
-
-
-
-
+        xorl %eax, %eax     // set the return value to 0
+        ret                 // return 0 if equal
 
 
 /*
@@ -124,24 +117,24 @@ wc_str_copy:
  */
 	.globl wc_isspace
 wc_isspace:
-    // input is dil (8 bit of rdi register)
+                    // input is dil (8 bit of rdi register)
     cmp $32, %dil   // check if char is a space ' '
-    je is_space     // jump to is_space and return 1
+    je .is_space    // jump to is_space and return 1
 
     cmp $9, %dil    // check if char is a tab '\t'
-    je is_space     // jump to is_space and return 1
+    je .is_space    // jump to is_space and return 1
 
     cmp $13, %dil   // check if char is a carriage return '\r'
-    je is_space     // jump to is_space and return 1
+    je .is_space    // jump to is_space and return 1
 
     cmp $10, %dil   // check if char is a newline '\n'
-    je is_space     // jump to is_space and return 1
+    je .is_space    // jump to is_space and return 1
 
     cmp $12, %dil   // check if char is a form feed '\f'
-    je is_space     // jump to is_space and return 1
+    je .is_space    // jump to is_space and return 1
 
     cmp $11, %dil   // check if char is a vertical tab '\v'
-    je is_space     // jump to is_space and return 1
+    je .is_space    // jump to is_space and return 1
 
     mov $0, %eax    // if not space, move 0 to eax
     ret             // return 0
@@ -161,29 +154,28 @@ is_space:
  */
     .globl wc_isalpha
 wc_isalpha:
-    // Comparing value with 65 ('A')
-    cmp $65, %dil 
-    jl is_not_alpha      // If less, jump to not alpha
+                        // input is dil (8 bit of rdi register)
+    cmp $65, %dil       // compare dil with 65 ('A')
+    jl .is_not_alpha    // if less, jump to not alpha
 
-    // Comparing value with 90 ('Z')
-    cmp $90, %dil 
-    jle is_alpha         // If less than or equal, jump to alpha
+    cmp $90, %dil       // compare value with 90 ('Z')
+    jle .is_alpha       // if less than or equal, jump to alpha
 
-    // Comparing value with 97 ('a')
-    cmp $97, %dil 
-    jl is_not_alpha      // If less, jump to not alpha
+    
+    cmp $97, %dil       // compare value with 97 ('a')
+    jl is_not_alpha     // if less, jump to not alpha
 
-    // Comparing value with 122 ('z')
-    cmp $122, %dil 
-    jg is_not_alpha      // If greater, jump to not alpha
+    
+    cmp $122, %dil      // compare value with 122 ('z')
+    jg .is_not_alpha    // if greater, jump to not alpha
 
 is_alpha:
-    mov $1, %eax        // Move 1 to eax
-    ret                 // Return 1
+    mov $1, %eax        // move 1 to eax
+    ret                 // return 1
 
 is_not_alpha:
-    mov $0, %eax        // Move 0 to eax
-    ret                 // Return 0
+    mov $0, %eax        // move 0 to eax
+    ret                 // return 0
 
 
 

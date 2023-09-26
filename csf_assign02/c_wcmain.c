@@ -27,8 +27,6 @@ int main(int argc, char **argv) {
     input = fopen(argv[1], "r");
   }
 
-  
-
   // handle error and return nonzero value if
   // the input file is invalid
   if (input == NULL) {
