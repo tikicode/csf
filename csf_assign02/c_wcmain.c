@@ -18,6 +18,7 @@ int main(int argc, char **argv) {
   // more than two arguments are supplied
   FILE *input;
   
+  // handle diffeerent argument numbers and opening file
   if (argc > 2) {
     fprintf(stderr, "Too many arguments supplied");
     return -1;
