@@ -115,26 +115,26 @@ wc_str_copy:
  * C function prototype:
  *    int wc_isspace(unsigned char c);
  */
-	.globl wc_isspace
+    .globl wc_isspace
 wc_isspace:
                     // input is dil (8 bit of rdi register)
     cmp $32, %dil   // check if char is a space ' '
-    je .is_space    // jump to is_space and return 1
+    je is_space     // jump to is_space and return 1
 
     cmp $9, %dil    // check if char is a tab '\t'
-    je .is_space    // jump to is_space and return 1
+    je is_space     // jump to is_space and return 1
 
     cmp $13, %dil   // check if char is a carriage return '\r'
-    je .is_space    // jump to is_space and return 1
+    je is_space     // jump to is_space and return 1
 
     cmp $10, %dil   // check if char is a newline '\n'
-    je .is_space    // jump to is_space and return 1
+    je is_space     // jump to is_space and return 1
 
     cmp $12, %dil   // check if char is a form feed '\f'
-    je .is_space    // jump to is_space and return 1
+    je is_space     // jump to is_space and return 1
 
     cmp $11, %dil   // check if char is a vertical tab '\v'
-    je .is_space    // jump to is_space and return 1
+    je is_space     // jump to is_space and return 1
 
     mov $0, %eax    // if not space, move 0 to eax
     ret             // return 0
@@ -142,6 +142,7 @@ wc_isspace:
 is_space:
     mov $1, %eax    // if space, move 1 to eax
     ret             // return 1
+
 
 
 
@@ -156,18 +157,18 @@ is_space:
 wc_isalpha:
                         // input is dil (8 bit of rdi register)
     cmp $65, %dil       // compare dil with 65 ('A')
-    jl .is_not_alpha    // if less, jump to not alpha
+    jl is_not_alpha    // if less, jump to not alpha
 
     cmp $90, %dil       // compare value with 90 ('Z')
-    jle .is_alpha       // if less than or equal, jump to alpha
+    jle is_alpha       // if less than or equal, jump to alpha
 
-    
+
     cmp $97, %dil       // compare value with 97 ('a')
     jl is_not_alpha     // if less, jump to not alpha
 
-    
+
     cmp $122, %dil      // compare value with 122 ('z')
-    jg .is_not_alpha    // if greater, jump to not alpha
+    jg is_not_alpha    // if greater, jump to not alpha
 
 is_alpha:
     mov $1, %eax        // move 1 to eax
@@ -176,6 +177,7 @@ is_alpha:
 is_not_alpha:
     mov $0, %eax        // move 0 to eax
     ret                 // return 0
+
 
 
 
