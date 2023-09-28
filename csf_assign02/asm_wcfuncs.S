@@ -36,9 +36,20 @@
  *    uint32_t wc_hash(const unsigned char *w);
  */
 	.globl wc_hash
+/* Implementation of hash function */
 wc_hash:
-/* TODO: implement */
-	ret
+    movl $5381, %edx           // Initialize hash_code to 5381
+.hash_loop:
+    movzbl (%rdi), %eax        // Load next byte (character) from memory to eax
+    testb %al, %al             // Test for null terminator
+    jz .end                    // If null, end the loop
+    imul $33, %edx, %edx       // Multiply hash_code by 33
+    addl %eax, %edx            // Add the character to hash_code
+    inc %rdi                   // Move to the next character in string
+    jmp .hash_loop                  // Repeat the loop
+.end:
+    movl %edx, %eax            // Move the final hash_code to eax for returning
+    ret
 
 /*
  * Compare two strings lexicographically. Return
