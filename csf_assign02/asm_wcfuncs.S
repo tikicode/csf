@@ -268,8 +268,24 @@ wc_tolower:
  */
 	.globl wc_trim_non_alpha
 wc_trim_non_alpha:
-	/* TODO: implement */
-	ret
+	.loop:
+        movb (%rdi), %al
+        testb %al, %al
+        jz .trim
+        incq %rdi
+        jmp .loop
+    .trim:
+        decq %rdi
+        movb (%rdi), %al
+        testb %al, %al
+        jz .trim_non_alpha_end
+        call wc_isalpha
+        jnz .trim_non_alpha_end
+        jmp .trim
+	.trim_non_alpha_end:
+        incq %rdi
+        movb $0, (%rdi)
+        ret
 
 /*
  * Search the specified linked list of WordEntry objects for an object
