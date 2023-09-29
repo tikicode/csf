@@ -39,17 +39,18 @@
 /* Implementation of hash function */
 wc_hash:
     movl $5381, %edx           // Initialize hash_code to 5381
-.hash_loop:
-    movzbl (%rdi), %eax        // Load next byte (character) from memory to eax
-    testb %al, %al             // Test for null terminator
-    jz .end                    // If null, end the loop
-    imul $33, %edx, %edx       // Multiply hash_code by 33
-    addl %eax, %edx            // Add the character to hash_code
-    inc %rdi                   // Move to the next character in string
-    jmp .hash_loop                  // Repeat the loop
-.end:
-    movl %edx, %eax            // Move the final hash_code to eax for returning
-    ret
+    
+    .hash_loop:
+        movzbl (%rdi), %eax        // Load next byte (character) from memory to eax
+        testb %al, %al             // Test for null terminator
+        jz .end                    // If null, end the loop
+        imul $33, %edx, %edx       // Multiply hash_code by 33
+        addl %eax, %edx            // Add the character to hash_code
+        inc %rdi                   // Move to the next character in string
+        jmp .hash_loop             // Repeat the loop
+    .end:
+        movl %edx, %eax            // Move the final hash_code to eax for returning
+        ret
 
 /*
  * Compare two strings lexicographically. Return
@@ -68,24 +69,22 @@ wc_hash:
  */
 	.globl wc_str_compare
 wc_str_compare:
-    .loop:                  // loop condition to parse through string until the NULL char is found
-        movb (%rdi), %al    // load a byte from the addresses in rdi and rsi into registers al and bl respectively
+    .str_compare_loop:        // loop condition to parse through string until the NULL char is found
+        movb (%rdi), %al      // load a byte from the addresses in rdi and rsi into registers al and bl respectively
         movb (%rsi), %bl
-        cmpb %bl, %al       // compare the bytes in al and bl
+        
+        cmpb %bl, %al         // compare the bytes in al and bl
+        jne .is_difference    // if they are not equal, jump to .is_difference
 
-        jne .is_difference  // if they are not equal, jump to .is_difference
+        testb %al, %al        // test if the end of the string (NULL character) is reached
+        jz .equal             // if NULL is reached, jump to .equal
 
-        testb %al, %al      // test if the end of the string (NULL character) is reached
-
-        jz .equal           // if NULL is reached, jump to .equal
-
-        incq %rdi           // increment the string pointers (rdi and rsi)
+        incq %rdi             // increment the string pointers (rdi and rsi)
         incq %rsi
 
-        jmp .loop           // jump back to .loop to compare the next characters
+        jmp .str_compare_loop // jump back to .loop to compare the next characters
 
     .is_difference:
-
         movzbl %al, %eax    // move the zero extended values of al and bl into eax and ebx respectively
         movzbl %bl, %ebx
 
@@ -94,8 +93,7 @@ wc_str_compare:
         ret                 // return the result
 
     .equal:
-
-        xorl %eax, %eax     // set the return value to 0
+        mov $0, %eax         // set the return value to 0
         ret                 // return 0 if equal
 
 
@@ -107,8 +105,22 @@ wc_str_compare:
  */
 	.globl wc_str_copy
 wc_str_copy:
-	/* TODO: implement */
-	ret
+
+	.str_copy_loop:
+        movb (%rsi), %dl
+
+        movb %dl, (%rdi)
+
+        testb %dl, %dl
+        jz .str_copy_end
+
+        incq %rdi
+        incq %rsi
+
+        jmp .str_copy_loop
+
+    .str_copy_end:
+        ret
 
 /*
  * Return 1 if the character code in c is a whitespace character,
@@ -130,29 +142,29 @@ wc_str_copy:
 wc_isspace:
                     // input is dil (8 bit of rdi register)
     cmp $32, %dil   // check if char is a space ' '
-    je is_space     // jump to is_space and return 1
+    je .is_space     // jump to is_space and return 1
 
     cmp $9, %dil    // check if char is a tab '\t'
-    je is_space     // jump to is_space and return 1
+    je .is_space     // jump to is_space and return 1
 
     cmp $13, %dil   // check if char is a carriage return '\r'
-    je is_space     // jump to is_space and return 1
+    je .is_space     // jump to is_space and return 1
 
     cmp $10, %dil   // check if char is a newline '\n'
-    je is_space     // jump to is_space and return 1
+    je .is_space     // jump to is_space and return 1
 
     cmp $12, %dil   // check if char is a form feed '\f'
-    je is_space     // jump to is_space and return 1
+    je .is_space     // jump to is_space and return 1
 
     cmp $11, %dil   // check if char is a vertical tab '\v'
-    je is_space     // jump to is_space and return 1
+    je .is_space     // jump to is_space and return 1
 
     mov $0, %eax    // if not space, move 0 to eax
     ret             // return 0
 
-is_space:
-    mov $1, %eax    // if space, move 1 to eax
-    ret             // return 1
+    .is_space:
+        mov $1, %eax    // if space, move 1 to eax
+        ret             // return 1
 
 
 
@@ -168,26 +180,26 @@ is_space:
 wc_isalpha:
                         // input is dil (8 bit of rdi register)
     cmp $65, %dil       // compare dil with 65 ('A')
-    jl is_not_alpha    // if less, jump to not alpha
+    jl .is_not_alpha    // if less, jump to not alpha
 
     cmp $90, %dil       // compare value with 90 ('Z')
-    jle is_alpha       // if less than or equal, jump to alpha
+    jle .is_alpha       // if less than or equal, jump to alpha
 
 
     cmp $97, %dil       // compare value with 97 ('a')
-    jl is_not_alpha     // if less, jump to not alpha
+    jl .is_not_alpha     // if less, jump to not alpha
 
 
     cmp $122, %dil      // compare value with 122 ('z')
-    jg is_not_alpha    // if greater, jump to not alpha
+    jg .is_not_alpha    // if greater, jump to not alpha
 
-is_alpha:
-    mov $1, %eax        // move 1 to eax
-    ret                 // return 1
+    .is_alpha:
+        mov $1, %eax        // move 1 to eax
+        ret                 // return 1
 
-is_not_alpha:
-    mov $0, %eax        // move 0 to eax
-    ret                 // return 0
+    .is_not_alpha:
+        mov $0, %eax        // move 0 to eax
+        ret                 // return 0
 
 
 
@@ -222,8 +234,30 @@ wc_readnext:
  */
 	.globl wc_tolower
 wc_tolower:
-	/* TODO: implement */
-	ret
+	.to_lower_loop:
+        movb (%rdi), %dl
+        testb %dl, %dl
+        jz .to_lower_end
+
+        cmp $65, %dl           // compare dil with 65 ('A')
+        jl .is_not_lower        // if less, jump to not alpha
+
+        cmp $90, %dl           // compare value with 90 ('Z')
+        jle .to_lower_action   // if less than or equal, jump to alpha
+
+        jmp .is_not_lower
+
+    .is_not_lower:
+        incq %rdi
+        jmp .to_lower_loop
+
+    .to_lower_action:
+        addl $32, (%rdi)
+        incq %rdi
+        jmp .to_lower_loop
+        
+	.to_lower_end:
+        ret
 
 /*
  * Remove any non-alphaabetic characters from the end of the
