@@ -239,11 +239,11 @@ wc_tolower:
         testb %dl, %dl
         jz .to_lower_end
 
-        cmp $65, %dl           // compare dil with 65 ('A')
-        jl .is_not_lower        // if less, jump to not alpha
+        cmp $65, %dl           
+        jl .is_not_lower      
 
-        cmp $90, %dl           // compare value with 90 ('Z')
-        jle .to_lower_action   // if less than or equal, jump to alpha
+        cmp $90, %dl          
+        jle .to_lower_action   
 
         jmp .is_not_lower
 
@@ -279,13 +279,29 @@ wc_trim_non_alpha:
         movb (%rdi), %al
         testb %al, %al
         jz .trim_non_alpha_end
-        call wc_isalpha
+        jmp .trim_isalpha
         jnz .trim_non_alpha_end
         jmp .trim
-	.trim_non_alpha_end:
+    .trim_isalpha:
+        cmp $65, %al      
+        jl .trim                      
+
+        cmp $90, %al      
+        jle .trim_non_alpha_end      
+
+
+        cmp $97, %al     
+        jl .trim          
+
+
+        cmp $122, %al     
+        jg .trim            
+
+    .trim_non_alpha_end:
         incq %rdi
         movb $0, (%rdi)
         ret
+
 
 /*
  * Search the specified linked list of WordEntry objects for an object
