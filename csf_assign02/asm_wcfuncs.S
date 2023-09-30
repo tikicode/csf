@@ -38,18 +38,18 @@
 	.globl wc_hash
 /* Implementation of hash function */
 wc_hash:
-    movl $5381, %edx           // Initialize hash_code to 5381
+    movl $5381, %edx                // Initialize hash_code to 5381
     
     .hash_loop:
-        movzbl (%rdi), %eax        // Load next byte (character) from memory to eax
-        testb %al, %al             // Test for null terminator
-        jz .end                    // If null, end the loop
-        imul $33, %edx, %edx       // Multiply hash_code by 33
-        addl %eax, %edx            // Add the character to hash_code
-        inc %rdi                   // Move to the next character in string
-        jmp .hash_loop             // Repeat the loop
+        movzbl (%rdi), %eax         // Load next byte (character) from memory to eax
+        testb %al, %al              // Test for null terminator
+        jz .end                     // If null, end the loop
+        imul $33, %edx, %edx        // Multiply hash_code by 33
+        addl %eax, %edx             // Add the character to hash_code
+        inc %rdi                    // Move to the next character in string
+        jmp .hash_loop              // Repeat the loop
     .end:
-        movl %edx, %eax            // Move the final hash_code to eax for returning
+        movl %edx, %eax             // Move the final hash_code to eax for returning
         ret
 
 /*
@@ -69,33 +69,32 @@ wc_hash:
  */
 	.globl wc_str_compare
 wc_str_compare:
-    .str_compare_loop:        // loop condition to parse through string until the NULL char is found
-        movb (%rdi), %al      // load a byte from the addresses in rdi and rsi into registers al and bl respectively
+    .str_compare_loop:              // loop condition to parse through string until the NULL char is found
+        movb (%rdi), %al            // load a byte from the addresses in rdi and rsi into registers al and bl respectively
         movb (%rsi), %bl
         
-        cmpb %bl, %al         // compare the bytes in al and bl
-        jne .is_difference    // if they are not equal, jump to .is_difference
+        cmpb %bl, %al               // compare the bytes in al and bl
+        jne .is_difference          // if they are not equal, jump to .is_difference
 
-        testb %al, %al        // test if the end of the string (NULL character) is reached
-        jz .equal             // if NULL is reached, jump to .equal
+        testb %al, %al              // test if the end of the string (NULL character) is reached
+        jz .equal                   // if NULL is reached, jump to .equal
 
-        incq %rdi             // increment the string pointers (rdi and rsi)
+        incq %rdi                   // increment the string pointers (rdi and rsi)
         incq %rsi
 
-        jmp .str_compare_loop // jump back to .loop to compare the next characters
+        jmp .str_compare_loop       // jump back to .loop to compare the next characters
 
     .is_difference:
-        movzbl %al, %eax    // move the zero extended values of al and bl into eax and ebx respectively
+        movzbl %al, %eax            // move the zero extended values of al and bl into eax and ebx respectively
         movzbl %bl, %ebx
 
-        subl %ebx, %eax     // subtract the value in ebx from eax
+        subl %ebx, %eax             // subtract the value in ebx from eax
 
-        ret                 // return the result
+        ret                         // return the result
 
     .equal:
-        mov $0, %eax         // set the return value to 0
-        ret                 // return 0 if equal
-
+        mov $0, %eax                // set the return value to 0
+        ret                         // return 0 if equal
 
 /*
  * Copy NUL-terminated source string to the destination buffer.
@@ -105,22 +104,20 @@ wc_str_compare:
  */
 	.globl wc_str_copy
 wc_str_copy:
-
 	.str_copy_loop:
-        movb (%rsi), %dl
+        movb (%rsi), %dl            // load a byte (char) from string source index into the dl register
+        movb %dl, (%rdi)            // move the char into the destination index
 
-        movb %dl, (%rdi)
+        testb %dl, %dl              // check if the null terminator has been reached
+        jz .str_copy_end            // jump to the end condition
 
-        testb %dl, %dl
-        jz .str_copy_end
+        incq %rdi                   // increment the destination register to get the next writable index
+        incq %rsi                   // increment the source register to get the next char index
 
-        incq %rdi
-        incq %rsi
-
-        jmp .str_copy_loop
+        jmp .str_copy_loop          // jump back to the str_copy_loop to copy the next char
 
     .str_copy_end:
-        ret
+        ret                         // return the destination string
 
 /*
  * Return 1 if the character code in c is a whitespace character,
@@ -140,34 +137,31 @@ wc_str_copy:
  */
     .globl wc_isspace
 wc_isspace:
-                    // input is dil (8 bit of rdi register)
-    cmp $32, %dil   // check if char is a space ' '
-    je .is_space     // jump to is_space and return 1
+                                    // input is dil (8 bit of rdi register)
+    cmp $32, %dil                   // check if char is a space ' '
+    je .is_space                    // jump to is_space and return 1
 
-    cmp $9, %dil    // check if char is a tab '\t'
-    je .is_space     // jump to is_space and return 1
+    cmp $9, %dil                    // check if char is a tab '\t'
+    je .is_space                    // jump to is_space and return 1
 
-    cmp $13, %dil   // check if char is a carriage return '\r'
-    je .is_space     // jump to is_space and return 1
+    cmp $13, %dil                   // check if char is a carriage return '\r'
+    je .is_space                    // jump to is_space and return 1
 
-    cmp $10, %dil   // check if char is a newline '\n'
-    je .is_space     // jump to is_space and return 1
+    cmp $10, %dil                   // check if char is a newline '\n'
+    je .is_space                    // jump to is_space and return 1
 
-    cmp $12, %dil   // check if char is a form feed '\f'
-    je .is_space     // jump to is_space and return 1
+    cmp $12, %dil                   // check if char is a form feed '\f'
+    je .is_space                    // jump to is_space and return 1
 
-    cmp $11, %dil   // check if char is a vertical tab '\v'
-    je .is_space     // jump to is_space and return 1
+    cmp $11, %dil                   // check if char is a vertical tab '\v'
+    je .is_space                    // jump to is_space and return 1
 
-    mov $0, %eax    // if not space, move 0 to eax
-    ret             // return 0
+    mov $0, %eax                    // if not space, move 0 to eax
+    ret                             // return 0
 
     .is_space:
-        mov $1, %eax    // if space, move 1 to eax
-        ret             // return 1
-
-
-
+        mov $1, %eax                // if space, move 1 to eax
+        ret                         // return 1
 
 /*
  * Return 1 if the character code in c is an alphabetic character
@@ -183,15 +177,15 @@ wc_isalpha:
     jl .is_not_alpha    // if less, jump to not alpha
 
     cmp $90, %dil       // compare value with 90 ('Z')
-    jle .is_alpha       // if less than or equal, jump to alpha
-
+    jbe .is_alpha       // if less than or equal, jump to alpha
 
     cmp $97, %dil       // compare value with 97 ('a')
-    jl .is_not_alpha     // if less, jump to not alpha
-
+    jl .is_not_alpha    // if less, jump to not alpha
 
     cmp $122, %dil      // compare value with 122 ('z')
-    jg .is_not_alpha    // if greater, jump to not alpha
+    jbe .is_alpha       // if less than, jump to alpha
+
+    jmp .is_not_alpha       // if above 122, jump to not alpha
 
     .is_alpha:
         mov $1, %eax        // move 1 to eax
@@ -200,9 +194,6 @@ wc_isalpha:
     .is_not_alpha:
         mov $0, %eax        // move 0 to eax
         ret                 // return 0
-
-
-
 
 /*
  * Read the next word from given input stream, storing
@@ -222,7 +213,11 @@ wc_isalpha:
  */
 	.globl wc_readnext
 wc_readnext:
-	/* TODO: implement */
+    push %ebp
+    mov %ebp, %esp
+
+    .read_next_char:
+        
 	ret
 
 /*
