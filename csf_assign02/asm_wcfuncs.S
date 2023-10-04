@@ -227,7 +227,53 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  */
 	.globl wc_readnext
 wc_readnext:
-	ret
+    subq $8, %rsp                   // Decrement stack pointer, assuming it's x86-64
+    xorl %eax, %eax                 // Initialize i = 0 and clear %eax for return value
+    mov $0, %ecx                    // Initialize word len checker
+
+.Lreadnext_initial:
+    call fgetc                      // Call fgetc(in)
+    cmpq $-1, %rax                  // Check if c == EOF
+    je .Lreadnext_failed            // If c == EOF, exit loop
+    push %rdi                       // Push FILE *in to store it
+    movb %al, %dil                  // Move char to first argument
+    call wc_isspace                 // Call wc_isspace(c)
+    movb %al, %dl                   // Copy the char into %dl
+    pop %rdi                        // Resture FILE *in to %rdi
+    test %al, %al                   // Check if wc_isspace(c) returned true (alphanumeric)
+    jz .Lreadnext_end               // If the char is a space, end the read
+    movb %dl, (%rsi)                // Store c in w[i]
+    incq %rsi                       // Increment string position
+
+.Lreadnext_loop:
+    incl %ecx                       // Increment counter
+    cmpl MAX_WORDLEN, %ecx          // See if counter has reached MAX_WORDLEN
+    je .Lreadnext_end
+    call fgetc                      // Call fgetc(in)
+    cmpl $-1, %eax                  // Check if c == EOF
+    je .Lreadnext_end               // If c == EOF, exit loop
+    push %rdi                       // Push FILE *in to store it
+    movb %al, %dil                  // Move char to first argument
+    call wc_isspace                 // Call wc_isspace(c)
+    movb %al, %dl                   // Copy the char into %dl
+    pop %rdi                        // Resture FILE *in to %rdi
+    test %al, %al                   // Check if wc_isspace(c) returned true (alphanumeric)
+    jz .Lreadnext_end                // If the char is a space, end the read
+    movb %dl, (%rsi)                // Store c in w[i]
+    incq %rsi                       // Increment string position
+    jmp .Lreadnext_loop              // Repeat the loop
+
+.Lreadnext_end:
+    incq %rsi                       // Increment string position
+    movb $0, (%rsi)                 // Null-terminate the string
+    mov $1, %eax                   // Set the return value to 1 (successful)
+    addq $8, %rsp                   // Restore the stack pointer
+    ret
+
+.Lreadnext_failed:
+    mov $0, %eax                   // Set the return value to 0 (failure)
+    addq $8, %rsp                   // Restore the stack pointer
+    ret
 
 /*
  * Convert the NUL-terminated character string in the array
@@ -286,8 +332,7 @@ wc_trim_non_alpha:
 .Ltrim_non_alpha:
     decq %rsi                       // Move to the previous char
     movb (%rsi), %dil               // Copy char to the dil register for the function call
-    testb %dil, %dil                // Check if the string has ended
-    jmp .Ltrim_non_alpha_end        // Return if it has
+    jz .Ltrim_non_alpha_end
 
     call wc_isalpha                 // Call the is_alpha function
     test %eax, %eax                 // Check if the character is alphanumeric from the function result
@@ -347,9 +392,9 @@ wc_dict_find_or_insert:
  */
 	.globl wc_free_chain
 wc_free_chain:
-	/* TODO: implement */
-	ret
+    
+    ret
 
 /*
-vim:ft=asm:
+vim:ft=gas:
 */

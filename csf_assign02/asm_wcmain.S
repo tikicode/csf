@@ -12,5 +12,5 @@ main:
 	ret
 
 /*
-vim:ft=asm:
+vim:ft=gas:
 */
