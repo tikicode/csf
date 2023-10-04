@@ -38,19 +38,22 @@
 	.globl wc_hash
 /* Implementation of hash function */
 wc_hash:
+    subq $8, %rsp                   // Decrement stack pointer
     movl $5381, %edx                // Initialize hash_code to 5381
-    
-    .hash_loop:
-        movzbl (%rdi), %eax         // Load next byte (character) from memory to eax
-        testb %al, %al              // Test for null terminator
-        jz .end                     // If null, end the loop
-        imul $33, %edx, %edx        // Multiply hash_code by 33
-        addl %eax, %edx             // Add the character to hash_code
-        inc %rdi                    // Move to the next character in string
-        jmp .hash_loop              // Repeat the loop
-    .end:
-        movl %edx, %eax             // Move the final hash_code to eax for returning
-        ret
+
+.Lhash_loop:
+    movzbl (%rdi), %eax             // Load next byte (character) from memory to eax
+    testb %al, %al                  // Test for null terminator
+    jz .Lhash_end                   // If null, end the loop
+    imul $33, %edx, %edx            // Multiply hash_code by 33
+    addl %eax, %edx                 // Add the character to hash_code
+    inc %rdi                        // Move to the next character in string
+    jmp .Lhash_loop                 // Repeat the loop
+
+.Lhash_end:
+    movl %edx, %eax                 // Move the final hash_code to eax for returning
+    addq $8, %rsp                   // Align stack pointer
+    ret                             // Return the hash_code
 
 /*
  * Compare two strings lexicographically. Return
@@ -69,32 +72,35 @@ wc_hash:
  */
 	.globl wc_str_compare
 wc_str_compare:
-    .str_compare_loop:              // loop condition to parse through string until the NULL char is found
-        movb (%rdi), %al            // load a byte from the addresses in rdi and rsi into registers al and bl respectively
-        movb (%rsi), %bl
-        
-        cmpb %bl, %al               // compare the bytes in al and bl
-        jne .is_difference          // if they are not equal, jump to .is_difference
+    subq $8, %rsp                   // Decrement stack pointer
 
-        testb %al, %al              // test if the end of the string (NULL character) is reached
-        jz .equal                   // if NULL is reached, jump to .equal
+.Lstr_compare_loop:                 // Loop condition to parse through string until the NULL char is found
+    movb (%rdi), %al                // Load a byte from the addresses in rdi and rsi into registers al and bl respectively
+    movb (%rsi), %bl
 
-        incq %rdi                   // increment the string pointers (rdi and rsi)
-        incq %rsi
+    cmpb %bl, %al                   // Compare the bytes in al and bl
+    jne .Lstr_compare_diff          // If they are not equal, jump to .is_difference
 
-        jmp .str_compare_loop       // jump back to .loop to compare the next characters
+    cmpb $0, %al                    // Test if the end of the string (NULL character) is reached
+    je .Lstr_compare_equal          // If NULL is reached, jump to .equal
 
-    .is_difference:
-        movzbl %al, %eax            // move the zero extended values of al and bl into eax and ebx respectively
-        movzbl %bl, %ebx
+    incq %rdi                       // Increment the string pointers (rdi and rsi)
+    incq %rsi
 
-        subl %ebx, %eax             // subtract the value in ebx from eax
+    jmp .Lstr_compare_loop          // Jump back to .loop to compare the next characters
 
-        ret                         // return the result
+.Lstr_compare_diff:
+    movzbl %al, %eax                // Move the zero extended values of al and bl into eax and ebx respectively
+    movzbl %bl, %ebx
+    subl %ebx, %eax                 // Subtract the value in ebx from eax
 
-    .equal:
-        mov $0, %eax                // set the return value to 0
-        ret                         // return 0 if equal
+    addq $8, %rsp                   // Align the stack pointer
+    ret                             // Return the result
+
+.Lstr_compare_equal:
+    mov $0, %eax                    // Set the return value to 0
+    addq $8, %rsp                   // Align the stack pointer
+    ret                             // Return 0 if equal
 
 /*
  * Copy NUL-terminated source string to the destination buffer.
@@ -104,20 +110,23 @@ wc_str_compare:
  */
 	.globl wc_str_copy
 wc_str_copy:
-	.str_copy_loop:
-        movb (%rsi), %dl            // load a byte (char) from string source index into the dl register
-        movb %dl, (%rdi)            // move the char into the destination index
+    subq $8, %rsp                   // Decrement stack pointer
 
-        testb %dl, %dl              // check if the null terminator has been reached
-        jz .str_copy_end            // jump to the end condition
+.Lstr_copy_loop:
+    movb (%rsi), %dl                // load a byte (char) from string source index into the dl register
+    movb %dl, (%rdi)                // move the char into the destination index
 
-        incq %rdi                   // increment the destination register to get the next writable index
-        incq %rsi                   // increment the source register to get the next char index
+    cmpb $0, %dl                    // check if the null terminator has been reached
+    je .Lstr_copy_end               // jump to the end condition
 
-        jmp .str_copy_loop          // jump back to the str_copy_loop to copy the next char
+    incq %rdi                       // increment the destination register to get the next writable index
+    incq %rsi                       // increment the source register to get the next char index
 
-    .str_copy_end:
-        ret                         // return the destination string
+    jmp .Lstr_copy_loop             // jump back to the str_copy_loop to copy the next char
+
+.Lstr_copy_end:
+    addq $8, %rsp                   // Align the stack pointer
+    ret                             // return the destination string
 
 /*
  * Return 1 if the character code in c is a whitespace character,
@@ -136,32 +145,35 @@ wc_str_copy:
  *    int wc_isspace(unsigned char c);
  */
     .globl wc_isspace
-wc_isspace:
-                                    // input is dil (8 bit of rdi register)
-    cmp $32, %dil                   // check if char is a space ' '
-    je .is_space                    // jump to is_space and return 1
+wc_isspace:                         // Input is dil (8 bit of rdi register)
+    subq $8, %rsp                   // Decrement stack pointer
 
-    cmp $9, %dil                    // check if char is a tab '\t'
-    je .is_space                    // jump to is_space and return 1
+    cmp $32, %dil                   // Check if char is a space ' '
+    je .Lisspace                    // Jump to is_space and return 1
 
-    cmp $13, %dil                   // check if char is a carriage return '\r'
-    je .is_space                    // jump to is_space and return 1
+    cmp $9, %dil                    // Check if char is a tab '\t'
+    je .Lisspace                    // Jump to is_space and return 1
 
-    cmp $10, %dil                   // check if char is a newline '\n'
-    je .is_space                    // jump to is_space and return 1
+    cmp $13, %dil                   // Check if char is a carriage return '\r'
+    je .Lisspace                    // Jump to is_space and return 1
 
-    cmp $12, %dil                   // check if char is a form feed '\f'
-    je .is_space                    // jump to is_space and return 1
+    cmp $10, %dil                   // Check if char is a newline '\n'
+    je .Lisspace                    // Jump to is_space and return 1
 
-    cmp $11, %dil                   // check if char is a vertical tab '\v'
-    je .is_space                    // jump to is_space and return 1
+    cmp $12, %dil                   // Check if char is a form feed '\f'
+    je .Lisspace                    // Jump to is_space and return 1
 
-    mov $0, %eax                    // if not space, move 0 to eax
-    ret                             // return 0
+    cmp $11, %dil                   // Check if char is a vertical tab '\v'
+    je .Lisspace                    // Jump to is_space and return 1
 
-    .is_space:
-        mov $1, %eax                // if space, move 1 to eax
-        ret                         // return 1
+    mov $0, %eax                    // If not space, move 0 to eax
+    addq $8, %rsp                   // Align stack pointer
+    ret                             // Return 0
+
+.Lisspace:
+    mov $1, %eax                    // If space, move 1 to eax
+    addq $8, %rsp                   // Align stack pointer
+    ret                             // Return 1
 
 /*
  * Return 1 if the character code in c is an alphabetic character
@@ -171,29 +183,31 @@ wc_isspace:
  *    int wc_isalpha(unsigned char c);
  */
     .globl wc_isalpha
-wc_isalpha:
-                        // input is dil (8 bit of rdi register)
-    cmp $65, %dil       // compare dil with 65 ('A')
-    jl .is_not_alpha    // if less, jump to not alpha
+wc_isalpha:                         // Input is dil (8 bit of rdi register)
+    subq $8, %rsp                   // Decrement stack pointer
 
-    cmp $90, %dil       // compare value with 90 ('Z')
-    jbe .is_alpha       // if less than or equal, jump to alpha
+    cmp $65, %dil                   // Compare dil with 65 ('A')
+    jb .Lisalpha_not                // If less, jump to not alpha
 
-    cmp $97, %dil       // compare value with 97 ('a')
-    jl .is_not_alpha    // if less, jump to not alpha
+    cmp $90, %dil                   // Compare value with 90 ('Z')
+    jbe .Lisalpha                   // If less than or equal, jump to alpha
 
-    cmp $122, %dil      // compare value with 122 ('z')
-    jbe .is_alpha       // if less than, jump to alpha
+    cmp $97, %dil                   // compare value with 97 ('a')
+    jb .Lisalpha_not                // If less, jump to not alpha
 
-    jmp .is_not_alpha       // if above 122, jump to not alpha
+    cmp $122, %dil                  // Compare value with 122 ('z')
+    jbe .Lisalpha                   // If less than, jump to alpha
 
-    .is_alpha:
-        mov $1, %eax        // move 1 to eax
-        ret                 // return 1
+                                    // If above 122, jump to not alpha
+.Lisalpha_not:
+    mov $0, %eax                    // Move 0 to eax
+    addq $8, %rsp                   // Align stack pointer
+    ret                             // Return 0
 
-    .is_not_alpha:
-        mov $0, %eax        // move 0 to eax
-        ret                 // return 0
+.Lisalpha:
+    mov $1, %eax                    // Move 1 to eax
+    addq $8, %rsp                   // Align stack pointer
+    ret                             // Return 1
 
 /*
  * Read the next word from given input stream, storing
@@ -213,11 +227,6 @@ wc_isalpha:
  */
 	.globl wc_readnext
 wc_readnext:
-    push %ebp
-    mov %ebp, %esp
-
-    .read_next_char:
-        
 	ret
 
 /*
@@ -229,30 +238,31 @@ wc_readnext:
  */
 	.globl wc_tolower
 wc_tolower:
-	.to_lower_loop:
-        movb (%rdi), %dl
-        testb %dl, %dl
-        jz .to_lower_end
+    subq $8, %rsp                   // Decrement stack pointer
 
-        cmp $65, %dl           
-        jl .is_not_lower      
+.Ltolower_loop:
+    movb (%rdi), %al                // Load a byte (char) into the al register
+    cmpb $0, %al                    // Check if the char is the null terminator
+    je .Ltolower_end                // End the loop and return
 
-        cmp $90, %dl          
-        jle .to_lower_action   
+    cmpb $65, %al                   // Compare the char to 'A'
+    jb .Ltolower_continue           // If the char is less than 'A', continue the loop
 
-        jmp .is_not_lower
+    cmpb $90, %al                   // Compare the char to 'Z'
+    jbe .Ltolower_convert           // If the char is greater than 'Z', continue the loop
 
-    .is_not_lower:
-        incq %rdi
-        jmp .to_lower_loop
+.Ltolower_continue:
+    incq %rdi                       // Get the next char of the string
+    jmp .Ltolower_loop              // Repeat loop checks
 
-    .to_lower_action:
-        addl $32, (%rdi)
-        incq %rdi
-        jmp .to_lower_loop
-        
-	.to_lower_end:
-        ret
+.Ltolower_convert:
+    addl $32, (%rdi)                // Make the char lowercase ('a' - 'A' = 97 - 65 = 32)
+    incq %rdi                       // Move to next char in string
+    jmp .Ltolower_loop
+
+.Ltolower_end:
+    addq $8, %rsp                   // Align stack pointer
+    ret                             // Return the lowercase string
 
 /*
  * Remove any non-alphaabetic characters from the end of the
@@ -263,39 +273,32 @@ wc_tolower:
  */
 	.globl wc_trim_non_alpha
 wc_trim_non_alpha:
-	.loop:
-        movb (%rdi), %al
-        testb %al, %al
-        jz .trim
-        incq %rdi
-        jmp .loop
-    .trim:
-        decq %rdi
-        movb (%rdi), %al
-        testb %al, %al
-        jz .trim_non_alpha_end
-        jmp .trim_isalpha
-        jnz .trim_non_alpha_end
-        jmp .trim
-    .trim_isalpha:
-        cmp $65, %al      
-        jl .trim                      
+    subq $8, %rsp                   // Decrement stack pointer
 
-        cmp $90, %al      
-        jle .trim_non_alpha_end      
+.Ltrim_non_alpha_loop:
+    movb (%rsi), %al                // Load a byte (char) into the al register
+    testb %al, %al                  // Check if the char is the null terminator
+    jz .Ltrim_non_alpha             // If the end of the string is reached, begin trimming
 
+    incq %rsi                       // Otherwise, go to the next char
+    jmp .Ltrim_non_alpha_loop       // Continue the loop
 
-        cmp $97, %al     
-        jl .trim          
+.Ltrim_non_alpha:
+    decq %rsi                       // Move to the previous char
+    movb (%rsi), %dil               // Copy char to the dil register for the function call
+    testb %dil, %dil                // Check if the string has ended
+    jmp .Ltrim_non_alpha_end        // Return if it has
 
+    call wc_isalpha                 // Call the is_alpha function
+    test %eax, %eax                 // Check if the character is alphanumeric from the function result
+    jnz .Ltrim_non_alpha_end        // If alphanumeric, stop trimming and return
 
-        cmp $122, %al     
-        jg .trim            
+    movb $0, (%rsi)                 // Replace char with a null terminator
+    jmp .Ltrim_non_alpha            // Check if the next character is not alphanumeric
 
-    .trim_non_alpha_end:
-        incq %rdi
-        movb $0, (%rdi)
-        ret
+.Ltrim_non_alpha_end:
+    addq $8, %rsp                   // Align stack pointer
+    ret                             // Void return
 
 
 /*
@@ -317,7 +320,6 @@ wc_trim_non_alpha:
  */
 	.globl wc_find_or_insert
 wc_find_or_insert:
-	/* TODO: implement */
 	ret
 
 /*
