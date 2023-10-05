@@ -231,25 +231,27 @@ wc_readnext:
 
 .Lreadnext_initial:
     call fgetc                      // Get the next char in the file
-    cmp $-1, %rax                  // Check if c == EOF
+    cmp $-1, %rax                   // Check if c == EOF
     je .Lreadnext_failed            // If c == EOF, exit loop
 
     push %rdi                       // Push FILE *in to store it
-    movb %al, %dil                  // Move char to first argument
+    push %al                        // Move char to first argument
     call wc_isspace                 // Call the isspace function
+    pop %al
     test %eax, %eax                 // Check if the char is a space
     jnz .Lreadnext_end              // If the char is a space, end the read
 
-    movb %dil, (%rsi)               // Store c in the string
+    movb %al, (%rsi)               // Store c in the string
     pop %rdi                        // Restore FILE *in to %rdi
     incq %rsi                       // Increment string position
+
 
 .Lreadnext_loop:
     test %rdi, %rdi
     jz .Lreadnext_end
-
+    incq %rdi
     call fgetc                      // Call fgetc(in)
-    cmp $-1, %rax                  // Check if c == EOF
+    cmp $-1, %rax                   // Check if c == EOF
     je .Lreadnext_end               // If c == EOF, exit loop
 
     push %rdi                       // Push FILE *in to store it
@@ -271,7 +273,7 @@ wc_readnext:
 
 .Lreadnext_failed:
     movl $0, %eax                   // Set the return value to 0 (failure)
-    addq $8, %rsp                  // Restore the stack pointer
+    addq $8, %rsp                   // Restore the stack pointer
     ret
 
 /*
@@ -408,22 +410,22 @@ wc_find_or_insert:
  *    struct WordEntry *wc_dict_find_or_insert(struct WordEntry *buckets[], unsigned num_buckets, const unsigned char *s)//
  */
 	.globl wc_dict_find_or_insert
-wc_find_or_insert:
+wc_dict_find_or_insert:
     subq $8, %rsp                   // Decrement stack pointer
     movq %rdi, %rcx
 
-.search_loop:
+.dsearch_loop:
     cmpq $0, %rdi                   // Check if cur == NULL
-    je .not_found
+    je .dnot_found
 
     call wc_str_compare
     test %eax, %eax
-    jz .found_match
+    jz .dfound_match
 
     movq WORDENTRY_NEXT_OFFSET(%rdi), %rdi
-    jmp .search_loop
+    jmp .dsearch_loop
 
-.not_found:
+.dnot_found:
     movq $72, %rdi
     call malloc              // Allocate memory for WordEntry
     call wc_str_copy
@@ -433,7 +435,7 @@ wc_find_or_insert:
     addq $8, %rsp                   // Align the stack pointer   
     ret
 
-.found_match:
+.dfound_match:
     movq $0, %rdx  
     addq $8, %rsp                   // Align the stack pointer    
     ret
