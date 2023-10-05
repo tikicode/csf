@@ -247,31 +247,20 @@ wc_readnext:
 .Lreadnext_loop:
     test %rdi, %rdi
     jz .Lreadnext_end
+
     call fgetc                      // Call fgetc(in)
     cmp $-1, %rax                  // Check if c == EOF
     je .Lreadnext_end               // If c == EOF, exit loop
 
     push %rdi                       // Push FILE *in to store it
     movb %al, %dil                  // Move char to first argument
-    movb %al, %dl                   // Copy the char into %dl
-    call wc_isspace                 // Call wc_isspace(c)
-    jnz .Lreadnext_end                // If the char is a space, end the read
-    pop %rdi                        // Resture FILE *in to %rdi
-    test %al, %al                   // Check if wc_isspace(c) returned true (alphanumeric)
-    movb %dl, (%rsi)                // Store c in w[i]
-    incq %rsi                      // Increment string position
-    jmp .Lreadnext_loop              // Repeat the loop
-    call wc_isspace                 // Call wc_isspace(c)
-    test %eax, %eax                 // Check if wc_isspace(c) returned true (alphanumeric)
-    jnz .Lreadnext_end               // If the char is a space, end the read
+    call wc_isspace                 // Call the isspace function
+    test %eax, %eax                 // Check if the char is a space
+    jnz .Lreadnext_end              // If the char is a space, end the read
 
-    test %rsi, %rsi
-    jz .Lreadnext_end               // Check if the buffer is full
-
-    movb %dil, (%rsi)               // Store c in w[i]
-    pop %rdi
+    movb %dil, (%rsi)               // Store c in the string
+    pop %rdi                        // Restore FILE *in to %rdi
     incq %rsi                       // Increment string position
-    jmp .Lreadnext_loop             // Repeat the loop
 
 .Lreadnext_end:
     incq %rsi                       // Increment string position
