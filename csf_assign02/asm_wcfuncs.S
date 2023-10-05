@@ -237,12 +237,12 @@ wc_readnext:
     je .Lreadnext_failed            // If c == EOF, exit loop
     push %rdi                       // Push FILE *in to store it
     movb %al, %dil                  // Move char to first argument
-    call wc_isspace                 // Call wc_isspace(c)
     movb %al, %dl                   // Copy the char into %dl
+    call wc_isspace                 // Call wc_isspace(c)
+    jnz .Lreadnext_end               // If the char is a space, end the read
     pop %rdi                        // Resture FILE *in to %rdi
     test %al, %al                   // Check if wc_isspace(c) returned true (alphanumeric)
-    jz .Lreadnext_end               // If the char is a space, end the read
-    movb %dl, (%rsi)                // Store c in w[i]
+    movb %al, (%rsi)                // Store c in w[i]
     incq %rsi                       // Increment string position
 
 .Lreadnext_loop:
@@ -254,13 +254,13 @@ wc_readnext:
     je .Lreadnext_end               // If c == EOF, exit loop
     push %rdi                       // Push FILE *in to store it
     movb %al, %dil                  // Move char to first argument
-    call wc_isspace                 // Call wc_isspace(c)
     movb %al, %dl                   // Copy the char into %dl
+    call wc_isspace                 // Call wc_isspace(c)
+    jnz .Lreadnext_end                // If the char is a space, end the read
     pop %rdi                        // Resture FILE *in to %rdi
     test %al, %al                   // Check if wc_isspace(c) returned true (alphanumeric)
-    jz .Lreadnext_end                // If the char is a space, end the read
     movb %dl, (%rsi)                // Store c in w[i]
-    incq %rsi                       // Increment string position
+    incq %rsi                      // Increment string position
     jmp .Lreadnext_loop              // Repeat the loop
 
 .Lreadnext_end:
