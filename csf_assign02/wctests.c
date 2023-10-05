@@ -160,6 +160,11 @@ void test_readnext(TestObjs *objs) {
   in = create_input_file(objs->words_1);
 
   ASSERT(1 == wc_readnext(in, buf));
+  // printf("\n");
+  // for (int i = 0; i < 64; i++) { 
+  //   printf("%c", buf[i]);
+  // }
+  // printf("\n");
   ASSERT(0 == strcmp("A", (const char *) buf));
 
   ASSERT(1 == wc_readnext(in, buf));
@@ -198,6 +203,7 @@ void test_trim_non_alpha(TestObjs *objs) {
 
   strcpy((char *) buf, (const char *) objs->test_str_3);
   ASSERT(0 == strcmp("O_O...", (const char *) buf));
+  
   wc_trim_non_alpha(buf);
   ASSERT(0 == strcmp("O_O", (const char *) buf));
 }
