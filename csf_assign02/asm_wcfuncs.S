@@ -227,31 +227,30 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  */
 	.globl wc_readnext
 wc_readnext:
-    subq $8, %rsp                   // Decrement stack pointer, assuming it's x86-64
-    xorl %eax, %eax                 // Initialize i = 0 and clear %eax for return value
-    mov $0, %ecx                    // Initialize word len checker
+    subq $8, %rsp                   // Decrement stack pointer
 
 .Lreadnext_initial:
-    call fgetc                      // Call fgetc(in)
-    cmpq $-1, %rax                  // Check if c == EOF
+    call fgetc                      // Get the next char in the file
+    cmp $-1, %rax                  // Check if c == EOF
     je .Lreadnext_failed            // If c == EOF, exit loop
+
     push %rdi                       // Push FILE *in to store it
     movb %al, %dil                  // Move char to first argument
-    movb %al, %dl                   // Copy the char into %dl
-    call wc_isspace                 // Call wc_isspace(c)
-    jnz .Lreadnext_end               // If the char is a space, end the read
-    pop %rdi                        // Resture FILE *in to %rdi
-    test %al, %al                   // Check if wc_isspace(c) returned true (alphanumeric)
-    movb %al, (%rsi)                // Store c in w[i]
+    call wc_isspace                 // Call the isspace function
+    test %eax, %eax                 // Check if the char is a space
+    jnz .Lreadnext_end              // If the char is a space, end the read
+
+    movb %dil, (%rsi)               // Store c in the string
+    pop %rdi                        // Restore FILE *in to %rdi
     incq %rsi                       // Increment string position
 
 .Lreadnext_loop:
-    incl %ecx                       // Increment counter
-    cmpl MAX_WORDLEN, %ecx          // See if counter has reached MAX_WORDLEN
-    je .Lreadnext_end
+    test %rdi, %rdi
+    jz .Lreadnext_end
     call fgetc                      // Call fgetc(in)
-    cmpl $-1, %eax                  // Check if c == EOF
+    cmp $-1, %rax                  // Check if c == EOF
     je .Lreadnext_end               // If c == EOF, exit loop
+
     push %rdi                       // Push FILE *in to store it
     movb %al, %dil                  // Move char to first argument
     movb %al, %dl                   // Copy the char into %dl
@@ -262,17 +261,28 @@ wc_readnext:
     movb %dl, (%rsi)                // Store c in w[i]
     incq %rsi                      // Increment string position
     jmp .Lreadnext_loop              // Repeat the loop
+    call wc_isspace                 // Call wc_isspace(c)
+    test %eax, %eax                 // Check if wc_isspace(c) returned true (alphanumeric)
+    jnz .Lreadnext_end               // If the char is a space, end the read
+
+    test %rsi, %rsi
+    jz .Lreadnext_end               // Check if the buffer is full
+
+    movb %dil, (%rsi)               // Store c in w[i]
+    pop %rdi
+    incq %rsi                       // Increment string position
+    jmp .Lreadnext_loop             // Repeat the loop
 
 .Lreadnext_end:
     incq %rsi                       // Increment string position
     movb $0, (%rsi)                 // Null-terminate the string
-    mov $1, %eax                   // Set the return value to 1 (successful)
+    mov $1, %rax                    // Set the return value to 1 (successful)
     addq $8, %rsp                   // Restore the stack pointer
     ret
 
 .Lreadnext_failed:
-    mov $0, %eax                   // Set the return value to 0 (failure)
-    addq $8, %rsp                   // Restore the stack pointer
+    movl $0, %eax                   // Set the return value to 0 (failure)
+    addq $8, %rsp                  // Restore the stack pointer
     ret
 
 /*
@@ -322,6 +332,7 @@ wc_trim_non_alpha:
     subq $8, %rsp                   // Decrement stack pointer
 
 .Ltrim_non_alpha_loop:
+    movq %rsi, %r8                  // Store the address of the beginning of the string
     movb (%rsi), %al                // Load a byte (char) into the al register
     testb %al, %al                  // Check if the char is the null terminator
     jz .Ltrim_non_alpha             // If the end of the string is reached, begin trimming
@@ -331,10 +342,11 @@ wc_trim_non_alpha:
 
 .Ltrim_non_alpha:
     decq %rsi                       // Move to the previous char
-    movb (%rsi), %dil               // Copy char to the dil register for the function call
+    test %rsi, %r8                  // Copy char to the dil register for the function call
     jz .Ltrim_non_alpha_end
 
-    call wc_isalpha                 // Call the is_alpha function
+    movb (%rsi), %dil               // Move the char into %dil for the call to isalpha
+    call wc_isalpha                 // Call the isalpha function
     test %eax, %eax                 // Check if the character is alphanumeric from the function result
     jnz .Ltrim_non_alpha_end        // If alphanumeric, stop trimming and return
 
@@ -365,7 +377,34 @@ wc_trim_non_alpha:
  */
 	.globl wc_find_or_insert
 wc_find_or_insert:
-	ret
+    subq $8, %rsp                   // Decrement stack pointer
+    movq %rdi, %rcx
+
+.search_loop:
+    cmpq $0, %rdi                   // Check if cur == NULL
+    je .not_found
+
+    call wc_str_compare
+    test %eax, %eax
+    jz .found_match
+
+    movq WORDENTRY_NEXT_OFFSET(%rdi), %rdi
+    jmp .search_loop
+
+.not_found:
+    movq $72, %rdi
+    call malloc              // Allocate memory for WordEntry
+    call wc_str_copy
+    movq $0, WORDENTRY_COUNT_OFFSET(%rdi)
+    movq %rcx, WORDENTRY_NEXT_OFFSET(%rdi)
+    movq $1, %rdx
+    addq $8, %rsp                   // Align the stack pointer   
+    ret
+
+.found_match:
+    movq $0, %rdx  
+    addq $8, %rsp                   // Align the stack pointer    
+    ret
 
 /*
  * Find or insert the WordEntry object for the given string (s), returning
@@ -377,7 +416,7 @@ wc_find_or_insert:
  * which represents s.
  *
  * C function prototype:
- *    struct WordEntry *wc_dict_find_or_insert(struct WordEntry *buckets[], unsigned num_buckets, const unsigned char *s);
+ *    struct WordEntry *wc_dict_find_or_insert(struct WordEntry *buckets[], unsigned num_buckets, const unsigned char *s)//
  */
 	.globl wc_dict_find_or_insert
 wc_dict_find_or_insert:
@@ -388,7 +427,7 @@ wc_dict_find_or_insert:
  * Free all of the nodes in given linked list of WordEntry objects.
  *
  * C function prototype:
- *    void wc_free_chain(struct WordEntry *p);
+ *    void wc_free_chain(struct WordEntry *p)//
  */
 	.globl wc_free_chain
 wc_free_chain:
