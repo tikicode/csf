@@ -419,9 +419,35 @@ wc_find_or_insert:
  *    struct WordEntry *wc_dict_find_or_insert(struct WordEntry *buckets[], unsigned num_buckets, const unsigned char *s)//
  */
 	.globl wc_dict_find_or_insert
-wc_dict_find_or_insert:
-	/* TODO: implement */
-	ret
+wc_find_or_insert:
+    subq $8, %rsp                   // Decrement stack pointer
+    movq %rdi, %rcx
+
+.search_loop:
+    cmpq $0, %rdi                   // Check if cur == NULL
+    je .not_found
+
+    call wc_str_compare
+    test %eax, %eax
+    jz .found_match
+
+    movq WORDENTRY_NEXT_OFFSET(%rdi), %rdi
+    jmp .search_loop
+
+.not_found:
+    movq $72, %rdi
+    call malloc              // Allocate memory for WordEntry
+    call wc_str_copy
+    movq $0, WORDENTRY_COUNT_OFFSET(%rdi)
+    movq %rcx, WORDENTRY_NEXT_OFFSET(%rdi)
+    movq $1, %rdx
+    addq $8, %rsp                   // Align the stack pointer   
+    ret
+
+.found_match:
+    movq $0, %rdx  
+    addq $8, %rsp                   // Align the stack pointer    
+    ret
 
 /*
  * Free all of the nodes in given linked list of WordEntry objects.
