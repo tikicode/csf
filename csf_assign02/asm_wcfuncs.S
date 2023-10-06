@@ -233,11 +233,9 @@ wc_readnext:
     call fgetc                      // Get the next char in the file
     cmp $-1, %rax                   // Check if c == EOF
     je .Lreadnext_failed            // If c == EOF, exit loop
-
+    
     push %rdi                       // Push FILE *in to store it
-    push %al                        // Move char to first argument
     call wc_isspace                 // Call the isspace function
-    pop %al
     test %eax, %eax                 // Check if the char is a space
     jnz .Lreadnext_end              // If the char is a space, end the read
 
