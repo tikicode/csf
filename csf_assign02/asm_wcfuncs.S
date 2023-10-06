@@ -38,22 +38,26 @@
 	.globl wc_hash
 /* Implementation of hash function */
 wc_hash:
-    subq $8, %rsp                   // Decrement stack pointer
-    movl $5381, %edx                // Initialize hash_code to 5381
+  subq $8, %rsp                   // Decrement stack pointer
+  pushq %r12                      // Local variable for the hashcode
+  pushq %r13                      // Local variable to store loaded chars
+  movl $5381, %r12d               // Initialize hash_code to 5381
 
 .Lhash_loop:
-    movzbl (%rdi), %eax             // Load next byte (character) from memory to eax
-    testb %al, %al                  // Test for null terminator
-    jz .Lhash_end                   // If null, end the loop
-    imul $33, %edx, %edx            // Multiply hash_code by 33
-    addl %eax, %edx                 // Add the character to hash_code
-    inc %rdi                        // Move to the next character in string
-    jmp .Lhash_loop                 // Repeat the loop
+  movzbl (%rdi), %r13d            // Load next byte (character) from memory to eax
+  testb %r13b, %r13b              // Test for null terminator
+  jz .Lhash_end                   // If null, end the loop
+  imul $33, %r12d, %r12d          // Multiply hash_code by 33
+  addl %r13d, %r12d               // Add the character to hash_code
+  inc %rdi                        // Move to the next character in string
+  jmp .Lhash_loop                 // Repeat the loop
 
 .Lhash_end:
-    movl %edx, %eax                 // Move the final hash_code to eax for returning
-    addq $8, %rsp                   // Align stack pointer
-    ret                             // Return the hash_code
+  movl %r12d, %eax                // Move the final hash_code to eax for returning
+  pop %r13                        // Restore value of %r13
+  pop %r12                        // Restore value of %r12
+  addq $8, %rsp                   // Align stack pointer
+  ret                             // Return the hash_code
 
 /*
  * Compare two strings lexicographically. Return
@@ -72,35 +76,41 @@ wc_hash:
  */
 	.globl wc_str_compare
 wc_str_compare:
-    subq $8, %rsp                   // Decrement stack pointer
+  subq $8, %rsp                   // Decrement stack pointer
+  push %r12                       // Local variable for the lhs char
+  push %r13                       // Local variable for the rhs char
 
-.Lstr_compare_loop:                 // Loop condition to parse through string until the NULL char is found
-    movb (%rdi), %al                // Load a byte from the addresses in rdi and rsi into registers al and bl respectively
-    movb (%rsi), %bl
+.Lstr_compare_loop:               // Loop condition to parse through string until the NULL char is found
+  movb (%rdi), %r12b              // Load a char from each string into their respective local variables
+  movb (%rsi), %r13b
 
-    cmpb %bl, %al                   // Compare the bytes in al and bl
-    jne .Lstr_compare_diff          // If they are not equal, jump to .is_difference
+  cmpb %r12b, %r13b               // Compare the lhs and rhs chars
+  jne .Lstr_compare_diff          // If they are not equal, jump to .is_difference
 
-    cmpb $0, %al                    // Test if the end of the string (NULL character) is reached
-    je .Lstr_compare_equal          // If NULL is reached, jump to .equal
+  cmpb $0, %r12b                  // Test if the end of the string (NULL character) is reached
+  je .Lstr_compare_equal          // If NULL is reached, jump to .equal
 
-    incq %rdi                       // Increment the string pointers (rdi and rsi)
-    incq %rsi
+  incq %rdi                       // Increment the string pointers (rdi and rsi)
+  incq %rsi
 
-    jmp .Lstr_compare_loop          // Jump back to .loop to compare the next characters
+  jmp .Lstr_compare_loop          // Jump back to .loop to compare the next characters
 
 .Lstr_compare_diff:
-    movzbl %al, %eax                // Move the zero extended values of al and bl into eax and ebx respectively
-    movzbl %bl, %ebx
-    subl %ebx, %eax                 // Subtract the value in ebx from eax
+  movzbl %r12b, %eax              // Move the zero extended values of the local chars to 32 bit registers
+  movzbl %r13b, %r13d
+  subl %r13d, %eax                // Subtract the values and store in the return value
 
-    addq $8, %rsp                   // Align the stack pointer
-    ret                             // Return the result
+  pop %r13                        // Restore value of %r13
+  pop %r12                        // Restore value of %r12
+  addq $8, %rsp                   // Align the stack pointer
+  ret                             // Return the result
 
 .Lstr_compare_equal:
-    mov $0, %eax                    // Set the return value to 0
-    addq $8, %rsp                   // Align the stack pointer
-    ret                             // Return 0 if equal
+  mov $0, %eax                    // Set the return value to 0
+  pop %r13                        // Restore value of %r13
+  pop %r12                        // Restore value of %r12
+  addq $8, %rsp                   // Align the stack pointer
+  ret                             // Return 0 if equal
 
 /*
  * Copy NUL-terminated source string to the destination buffer.
@@ -110,24 +120,26 @@ wc_str_compare:
  */
 	.globl wc_str_copy
 wc_str_copy:
-    subq $8, %rsp                   // Decrement stack pointer
+  subq $8, %rsp                   // Decrement stack pointer
+  push %r12                       // Local variable for the copied char
 
 .Lstr_copy_loop:
-    movb (%rsi), %dl                // load a byte (char) from string source index into the dl register
-    movb %dl, (%rdi)                // move the char into the destination index
+  movb (%rsi), %r12b              // Load a byte (char) from string source index into the temp register
+  movb %r12b, (%rdi)              // Move the char into the destination index
 
-    cmpb $0, %dl                    // check if the null terminator has been reached
-    je .Lstr_copy_end               // jump to the end condition
+  cmpb $0, %r12b                  // Check if the null terminator has been reached
+  je .Lstr_copy_end               // Jump to the end condition
 
-    incq %rdi                       // increment the destination register to get the next writable index
-    incq %rsi                       // increment the source register to get the next char index
+  incq %rdi                       // Increment the destination register to get the next writable index
+  incq %rsi                       // Increment the source register to get the next char index
 
-    jmp .Lstr_copy_loop             // jump back to the str_copy_loop to copy the next char
+  jmp .Lstr_copy_loop             // Jump back to the str_copy_loop to copy the next char
 
 .Lstr_copy_end:
-    movb $0, (%rdi)
-    addq $8, %rsp                   // Align the stack pointer
-    ret                             // return the destination string
+  movb $0, (%rdi)                 // Add null terminator to destination string
+  pop %r12                        // Restore value of %r12
+  addq $8, %rsp                   // Align the stack pointer
+  ret                             // return the destination string
 
 /*
  * Return 1 if the character code in c is a whitespace character,
@@ -147,29 +159,29 @@ wc_str_copy:
  */
     .globl wc_isspace
 wc_isspace:                         // Input is dil (8 bit of rdi register)
-    subq $8, %rsp                   // Decrement stack pointer
+  subq $8, %rsp                     // Decrement stack pointer
 
-    cmp $32, %dil                   // Check if char is a space ' '
-    je .Lisspace                    // Jump to is_space and return 1
+  cmp $32, %dil                     // Check if char is a space ' '
+  je .Lisspace                      // Jump to is_space and return 1
 
-    cmp $9, %dil                    // Check if char is a tab '\t'
-    je .Lisspace                    // Jump to is_space and return 1
+  cmp $9, %dil                      // Check if char is a tab '\t'
+  je .Lisspace                      // Jump to is_space and return 1
 
-    cmp $13, %dil                   // Check if char is a carriage return '\r'
-    je .Lisspace                    // Jump to is_space and return 1
+  cmp $13, %dil                     // Check if char is a carriage return '\r'
+  je .Lisspace                      // Jump to is_space and return 1
 
-    cmp $10, %dil                   // Check if char is a newline '\n'
-    je .Lisspace                    // Jump to is_space and return 1
+  cmp $10, %dil                     // Check if char is a newline '\n'
+  je .Lisspace                      // Jump to is_space and return 1
 
-    cmp $12, %dil                   // Check if char is a form feed '\f'
-    je .Lisspace                    // Jump to is_space and return 1
+  cmp $12, %dil                     // Check if char is a form feed '\f'
+  je .Lisspace                      // Jump to is_space and return 1
 
-    cmp $11, %dil                   // Check if char is a vertical tab '\v'
-    je .Lisspace                    // Jump to is_space and return 1
+  cmp $11, %dil                     // Check if char is a vertical tab '\v'
+  je .Lisspace                      // Jump to is_space and return 1
 
-    mov $0, %eax                    // If not space, move 0 to eax
-    addq $8, %rsp                   // Align stack pointer
-    ret                             // Return 0
+  mov $0, %eax                      // If not space, move 0 to eax
+  addq $8, %rsp                     // Align stack pointer
+  ret                               // Return 0
 
 .Lisspace:
     mov $1, %eax                    // If space, move 1 to eax
@@ -185,30 +197,30 @@ wc_isspace:                         // Input is dil (8 bit of rdi register)
  */
     .globl wc_isalpha
 wc_isalpha:                         // Input is dil (8 bit of rdi register)
-    subq $8, %rsp                   // Decrement stack pointer
+  subq $8, %rsp                     // Decrement stack pointer
 
-    cmp $65, %dil                   // Compare dil with 65 ('A')
-    jb .Lisalpha_not                // If less, jump to not alpha
+  cmp $65, %dil                     // Compare dil with 65 ('A')
+  jb .Lisalpha_not                  // If less, jump to not alpha
 
-    cmp $90, %dil                   // Compare value with 90 ('Z')
-    jbe .Lisalpha                   // If less than or equal, jump to alpha
+  cmp $90, %dil                     // Compare value with 90 ('Z')
+  jbe .Lisalpha                     // If less than or equal, jump to alpha
 
-    cmp $97, %dil                   // compare value with 97 ('a')
-    jb .Lisalpha_not                // If less, jump to not alpha
+  cmp $97, %dil                     // compare value with 97 ('a')
+  jb .Lisalpha_not                  // If less, jump to not alpha
 
-    cmp $122, %dil                  // Compare value with 122 ('z')
-    jbe .Lisalpha                   // If less than, jump to alpha
+  cmp $122, %dil                    // Compare value with 122 ('z')
+  jbe .Lisalpha                     // If less than, jump to alpha
 
                                     // If above 122, jump to not alpha
 .Lisalpha_not:
-    mov $0, %eax                    // Move 0 to eax
-    addq $8, %rsp                   // Align stack pointer
-    ret                             // Return 0
+  mov $0, %eax                      // Move 0 to eax
+  addq $8, %rsp                     // Align stack pointer
+  ret                               // Return 0
 
 .Lisalpha:
-    mov $1, %eax                    // Move 1 to eax
-    addq $8, %rsp                   // Align stack pointer
-    ret                             // Return 1
+  mov $1, %eax                      // Move 1 to eax
+  addq $8, %rsp                     // Align stack pointer
+  ret                               // Return 1
 
 /*
  * Read the next word from given input stream, storing
@@ -228,70 +240,67 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  */
 	.globl wc_readnext
 wc_readnext:
-    subq $8, %rsp             
+  subq $8, %rsp                     // Decrement stack pointer                       
 
-    testq %rdi, %rdi
-    jz .Lreadnext_failed
+  testq %rdi, %rdi                  // Check if FILE *in is null
+  jz .Lreadnext_failed              // Jump to failed read if null
 
-    pushq %r12
-    pushq %r13
-    pushq %r14
-    pushq %r15 
+  pushq %r12                        // Local var for FILE *in
+  pushq %r13                        // Local var for the destination string
+  pushq %r14                        // Local var for the counter
+  pushq %r15                        // Local var for chars 
 
-    movq %rdi, %r12
-    movq %rsi, %r13
-    movl $0, %r14d
-    movq $0, %r15
+  movq %rdi, %r12                   // Put FILE *in in local
+  movq %rsi, %r13                   // Put destination in local
+  movl $0, %r14d                    // Initialize counter to zero
+  movq $0, %r15                     // Ensure char var is empty
 
 .Lreadnext_loop:
-    cmpl $MAX_WORDLEN, %r14d
-    je .Lreadnext_end
+  cmpl $MAX_WORDLEN, %r14d          // Check count against max size of dest string (64)
+  je .Lreadnext_end                 // If max size reached, end read
 
-    movq %r12, %rdi
-    call fgetc
+  movq %r12, %rdi                   // Restore %rdi to FILE *in for the call to fgetc
+  call fgetc                        // Get next char from file
 
-    movb %al, %r15b
-    cmp $-1, %eax                  // Check if c == EOF
-    je .Lreadnext_end 
+  movb %al, %r15b                   // Move char return from fgetc to local char var
+  cmp $-1, %eax                     // Check if c == EOF
+  je .Lreadnext_end                 // If EOF, end read
 
-    movb %r15b, %dil
-    call wc_isspace
-    cmpl $1, %eax                 // Check if the char is a space
-    je .Lreadnext_end              // If the char is a space, end the read
+  movb %r15b, %dil                  // Move char from fgetc to first argument for input into isspace
+  call wc_isspace                   // Call isspace
+  cmpl $1, %eax                     // Check if the char is a space
+  je .Lreadnext_end                 // If the char is a space, end the read
 
-    movb %r15b, (%r13)
+  movb %r15b, (%r13)                // Move the char to the destination string
 
-    incq %r13
-    incl %r14d
+  incq %r13                         // Move to the next position of the destination string
+  incl %r14d                        // Increment the counter
 
-    jmp .Lreadnext_loop
+  jmp .Lreadnext_loop               // Get the next char
 
 .Lreadnext_end:
-    movb $0, (%r13)
+  movb $0, (%r13)                   // Null terminate the destination string
 
-    movl %r14d, %eax
-    mov %r13, %rsi
-    mov %r12, %rdi
-    
-    popq %r15 
-    popq %r14
-    popq %r13
-    popq %r12
+  movl %r14d, %eax                  // Move the counter to the output val
+  mov %r13, %rsi                    // Move the local FILE *in and restore to input
+  mov %r12, %rdi                    // Restore destination string to the input
+  
+  popq %r15                         // Restore value of local vars
+  popq %r14
+  popq %r13
+  popq %r12
 
-    cmpl $0, %eax
-    je .Lreadnext_failed
+  cmpl $0, %eax                     // Check if the counter is 0, if so, the read has failed
+  je .Lreadnext_failed
 
-    movl $1, %eax
-    addq $8, %rsp
-    ret
+  movl $1, %eax                     // If the read was successful, return one
+  addq $8, %rsp                     // Restore the stack ptr
+  ret
 
 .Lreadnext_failed:
-    addq $8, %rsp
-    movl $0, %eax
-    ret
-        
-
-
+  movl $0, %eax                     // If the read failed, return zero
+  addq $8, %rsp                     // Restore the stack ptr
+  ret
 
 /*
  * Convert the NUL-terminated character string in the array
@@ -302,31 +311,33 @@ wc_readnext:
  */
 	.globl wc_tolower
 wc_tolower:
-    subq $8, %rsp                   // Decrement stack pointer
+  subq $8, %rsp                     // Decrement stack pointer
+  push %r12                         // Local var for char
 
 .Ltolower_loop:
-    movb (%rdi), %al                // Load a byte (char) into the al register
-    cmpb $0, %al                    // Check if the char is the null terminator
-    je .Ltolower_end                // End the loop and return
+  movb (%rdi), %r12b                // Load a byte (char) into the char register
+  cmpb $0, %r12b                    // Check if the char is the null terminator
+  je .Ltolower_end                  // End the loop and return
 
-    cmpb $65, %al                   // Compare the char to 'A'
-    jb .Ltolower_continue           // If the char is less than 'A', continue the loop
+  cmpb $65, %r12b                   // Compare the char to 'A'
+  jb .Ltolower_continue             // If the char is less than 'A', continue the loop
 
-    cmpb $90, %al                   // Compare the char to 'Z'
-    jbe .Ltolower_convert           // If the char is greater than 'Z', continue the loop
+  cmpb $90, %r12b                   // Compare the char to 'Z'
+  jbe .Ltolower_convert             // If the char is greater than 'Z', continue the loop
 
 .Ltolower_continue:
-    incq %rdi                       // Get the next char of the string
-    jmp .Ltolower_loop              // Repeat loop checks
+  incq %rdi                         // Get the next char of the string
+  jmp .Ltolower_loop                // Repeat loop checks
 
 .Ltolower_convert:
-    addl $32, (%rdi)                // Make the char lowercase ('a' - 'A' = 97 - 65 = 32)
-    incq %rdi                       // Move to next char in string
-    jmp .Ltolower_loop
+  addl $32, (%rdi)                  // Make the char lowercase ('a' - 'A' = 97 - 65 = 32)
+  incq %rdi                         // Move to next char in string
+  jmp .Ltolower_loop
 
-.Ltolower_end:
-    addq $8, %rsp                   // Align stack pointer
-    ret                             // Return the lowercase string
+.Ltolower_end:  
+  pop %r12                          // Restore local var
+  addq $8, %rsp                     // Align stack pointer
+  ret                               // Return the lowercase string
 
 /*
  * Remove any non-alphaabetic characters from the end of the
@@ -337,33 +348,37 @@ wc_tolower:
  */
 	.globl wc_trim_non_alpha
 wc_trim_non_alpha:
-    subq $8, %rsp                   // Decrement stack pointer
+  subq $8, %rsp                     // Decrement stack pointer
+  push %r12                         // Local var for char
+  push %r13                         // Local var to track beginning of string
+  movq %rsi, %r13                   // Initialize local var to address of the beginning of the string
 
 .Ltrim_non_alpha_loop:
-    movq %rsi, %r8                  // Store the address of the beginning of the string
-    movb (%rsi), %al                // Load a byte (char) into the al register
-    testb %al, %al                  // Check if the char is the null terminator
-    jz .Ltrim_non_alpha             // If the end of the string is reached, begin trimming
+  movb (%rsi), %r12b                // Load a byte (char) into the al register
+  testb %r12b, %r12b                // Check if the char is the null terminator
+  jz .Ltrim_non_alpha               // If the end of the string is reached, begin trimming
 
-    incq %rsi                       // Otherwise, go to the next char
-    jmp .Ltrim_non_alpha_loop       // Continue the loop
+  incq %rsi                         // Otherwise, go to the next char
+  jmp .Ltrim_non_alpha_loop         // Continue the loop
 
 .Ltrim_non_alpha:
-    decq %rsi                       // Move to the previous char
-    test %rsi, %r8                  // Copy char to the dil register for the function call
-    jz .Ltrim_non_alpha_end
+  decq %rsi                         // Move to the previous char
+  test %rsi, %r13                   // Check if the start of the string was reached
+  jz .Ltrim_non_alpha_end           // If it was reached, end the loop
 
-    movb (%rsi), %dil               // Move the char into %dil for the call to isalpha
-    call wc_isalpha                 // Call the isalpha function
-    test %eax, %eax                 // Check if the character is alphanumeric from the function result
-    jnz .Ltrim_non_alpha_end        // If alphanumeric, stop trimming and return
+  movb (%rsi), %dil                 // Move the char into %dil for the call to isalpha
+  call wc_isalpha                   // Call the isalpha function
+  test %eax, %eax                   // Check if the character is alphanumeric from the function result
+  jnz .Ltrim_non_alpha_end          // If alphanumeric, stop trimming and return
 
-    movb $0, (%rsi)                 // Replace char with a null terminator
-    jmp .Ltrim_non_alpha            // Check if the next character is not alphanumeric
+  movb $0, (%rsi)                   // Replace char with a null terminator
+  jmp .Ltrim_non_alpha              // Check if the next character is not alphanumeric
 
 .Ltrim_non_alpha_end:
-    addq $8, %rsp                   // Align stack pointer
-    ret                             // Void return
+  addq $8, %rsp                     // Align stack pointer
+  pop %r13                          // Restore value of %r13
+  pop %r12                          // Restore value of %r12
+  ret                               // Void return
 
 
 /*
@@ -385,67 +400,63 @@ wc_trim_non_alpha:
  */
 	.globl wc_find_or_insert
 wc_find_or_insert:
-    subq $8, %rsp
-    pushq %r12
-    pushq %r13
-    pushq %r14
-    pushq %r15
-    movq %rdi, %r12
-    movq %rsi, %r13
-    movq %rdx, %r14
-    movq %rdi, %r15
+  subq $8, %rsp
+  pushq %r12                        // Local var to track cur pos of WordEntry
+  pushq %r13                        // Local var to track string
+  pushq %r14                        // Local var to track inserted
+  pushq %r15                        // Local var to track *head
 
-.search_loop:
-    testq %r12, %r12
-    jz .not_found
+  movq %rdi, %r12                   // Assign cur pos to head
+  movq %rsi, %r13                   // Assign string var to s
+  movq %rdx, %r14                   // Assign inserted var to inserted
+  movq %rdi, %r15                   // Assign head tracker to head
 
-    movq %r12, %rdi
-    movq %r13, %rsi
-    call wc_str_compare
-    test %eax, %eax
-    jz .found_match
+.Lsearch_loop:
+  testq %r12, %r12                  // Check if the WordEntry list is null
+  jz .Lnot_found                    // Insert a new entry
 
-    movq WORDENTRY_NEXT_OFFSET(%r12), %r12
-    test %r12, %r12
-    jz .not_found
-    jmp .search_loop
+  movq %r12, %rdi                   // Move the current WordEntry to rdi
+  movq %r13, %rsi                   // Move the target word to rsi 
+  call wc_str_compare               // Compare the words
+  test %eax, %eax                   // Check if the words are the same
+  jz .Lfound_match                  // Return cur pos
 
-.not_found:
-    movq $80, %rdi
-    pushq %rdx
-    call malloc
-    movq %rdi, %r15
-    popq %rdx
-    
-    leaq WORDENTRY_WORD_OFFSET(%rax), %r15
-    movq %r13, %rsi
-    call wc_str_copy
+  movq WORDENTRY_NEXT_OFFSET(%r12), %r12 // Move to the next WordEntry object in the linked list
+  jmp .Lsearch_loop                 // Continue searching
 
-    movq $0, WORDENTRY_COUNT_OFFSET(%r15)
-    movq %r12, WORDENTRY_NEXT_OFFSET(%r15)
-    addq $8, %rsp
-    //seems like only value is moving should not be the case
-    movq %r15, %rax
-    movl $1, (%r14)
+.Lnot_found:
+  movq $80, %rdi                    // Move 80 (size of WordEntry obj) to the first input var %rdi for malloc
+  call malloc                       // Allocate a new WordEntry object
+  movq %rax, %r12                   // Move result to the cur pos
 
-    popq %r15
-    popq %r14
-    popq %r13
-    popq %r12
-    
-    ret
+  movq %r13, %rsi                   // Move the target string into %rsi for copying
+  call wc_str_copy                  // Copy the target string into the new WordEntry object
 
-.found_match:
-    addq $8, %rsp
-    mov %r15, %rax
-    movl $0, (%r14)
+  movl $0, WORDENTRY_COUNT_OFFSET(%r12)  // Initialize count to 0
+  movq %r15, WORDENTRY_NEXT_OFFSET(%r12) // Put the new object at the top of the linked list
 
-    popq %r15
-    popq %r14
-    popq %r13
-    popq %r12
+  movq %r12, %rax                   // Move the new object to the return register
+  movl $1, (%r14)                   // Set inserted to one
 
-    ret
+  popq %r15                         // Restore local variables
+  popq %r14
+  popq %r13
+  popq %r12
+  
+  addq $8, %rsp                     // Align stack ptr
+  ret                               // Return the new WordEntry
+
+.Lfound_match:
+  movq %r12, %rax                   // Move the cur WordEntry to the return address
+  movl $0, (%r14)                   // Set inserted to zero
+
+  popq %r15                         // Restore local variables
+  popq %r14
+  popq %r13
+  popq %r12
+
+  addq $8, %rsp                     // Align stack ptr
+  ret
 
 /*
  * Find or insert the WordEntry object for the given string (s), returning
@@ -498,23 +509,23 @@ wc_dict_find_or_insert:
  */
 	.globl wc_free_chain
 wc_free_chain:
-  subq $8, %rsp 
-  pushq %r12
-  movq %rdi, %r12
+  subq $8, %rsp                     // Align stack ptr
+  pushq %r12                        // Create local var for memory to be freed
+  movq %rdi, %r12                   // Put WordEntry object in local var
 
 .Lfree_chain_loop:
-  testq %r12, %r12
-  jz .Lfree_chain_end
+  testq %r12, %r12                  // Check if the whole chain has been freed
+  jz .Lfree_chain_end               // End the loop
 
-  movq %r12, %rdi
-  movq WORDENTRY_NEXT_OFFSET(%r12), %r12
-  call free
-  jmp .Lfree_chain_loop
+  movq %r12, %rdi                   // Move the current WordEntry object to the input var for free
+  movq WORDENTRY_NEXT_OFFSET(%r12), %r12  // Move to the next WordEntry object
+  call free                         // Call free on the previous WordEntry object
+  jmp .Lfree_chain_loop             // Continue freeing
 
 .Lfree_chain_end:
-  popq %r12
-  addq $8, %rsp
-  ret
+  popq %r12                         // Restore local variable
+  addq $8, %rsp                     // Align stack ptr
+  ret                               // Void return
 
 /*
 vim:ft=gas:
