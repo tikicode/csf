@@ -227,59 +227,57 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  */
 	.globl wc_readnext
 wc_readnext:
-    pushq %rdi
     subq $8, %rsp
 
-    movq $0, %rdx  //setting a counter equal to 0
-    //pushq %rsi
+    movl $0, %r8d  //setting a counter equal to 0
     call fgetc
-    //popq %rsi
-    cmp $-1, %rax                  // Check if c == EOF
+    movb %al, %dl
+    cmp $-1, %eax                  // Check if c == EOF
     je .Lreadnext_failed            // If c == EOF, exit loop
-    testq %rax, %rax
-    pushq %rdi
-    movb %al, %dil
-    pushq %rax
+
+    push %rdi
     call wc_isspace
-    popq %rdi
     test %eax, %eax                 // Check if the char is a space
+    pop %rdi
     jnz .Lreadnext_end              // If the char is a space, end the read
-    popq %rax
-    //movb %al, (%rsi)
-    incq %rsi
+    movb %dl, (%rsi)
+    
+    inc %rsi
+    inc %rdi
+
 
 .Lreadnext_loop:
-    test %rdi, %rdi
-    jz .Lreadnext_end
+    inc %r8d
+    cmp $64, %ecx
+    je .Lreadnext_filled
 
-    popq %rdi
-    pushq %rdi
-    //pushq %rsi
     call fgetc
-    //popq %rsi
-    cmp $-1, %rax                  // Check if c == EOF
-    je .Lreadnext_end
-    testq %rax, %rax
-    pushq %rdi
-    movb %al, %dil
-    pushq %rax
+    mov %al, %dl
+    cmp $-1, %eax                  // Check if c == EOF
+    je .Lreadnext_end            // If c == EOF, exit loop
+
+    push %rdi
     call wc_isspace
-    popq %rdi
     test %eax, %eax                 // Check if the char is a space
+    pop %rdi
     jnz .Lreadnext_end              // If the char is a space, end the read
-    popq %rax
-    //movb %al, (%rsi)
-    incq %rsi
+    mov %dl, (%rsi)
+
     jmp .Lreadnext_loop
 
+.Lreadnext_filled:
+    dec %rdi
+    movb $0, (%rsi)
+    addq $8, %rsp
+    movq $1, %rax
+    ret
+
 .Lreadnext_end:
-    popq %rdi
     movb $0, (%rsi)
     addq $8, %rsp
     movq $1, %rax
     ret
 .Lreadnext_failed:
-    popq %rdi
     addq $8, %rsp
     movq $0, %rax
     ret
