@@ -228,10 +228,10 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
 	.globl wc_readnext
 wc_readnext:
     subq $8, %rsp
+    push %rsi
 
-    movl $0, %r8d  //setting a counter equal to 0
     call fgetc
-    movb %al, %dl
+    push %al
     cmp $-1, %eax                  // Check if c == EOF
     je .Lreadnext_failed            // If c == EOF, exit loop
 
@@ -240,6 +240,9 @@ wc_readnext:
     test %eax, %eax                 // Check if the char is a space
     pop %rdi
     jnz .Lreadnext_end              // If the char is a space, end the read
+
+    pop %al
+    pop %rsi
     movb %dl, (%rsi)
     
     inc %rsi
@@ -247,21 +250,27 @@ wc_readnext:
 
 
 .Lreadnext_loop:
-    inc %r8d
-    cmp $64, %ecx
-    je .Lreadnext_filled
+    push %rsi
+    test %rdi, %rdi
+    jz .Lreadnext_filled
 
     call fgetc
-    mov %al, %dl
+    push %al
     cmp $-1, %eax                  // Check if c == EOF
-    je .Lreadnext_end            // If c == EOF, exit loop
+    je .Lreadnext_failed            // If c == EOF, exit loop
 
     push %rdi
     call wc_isspace
     test %eax, %eax                 // Check if the char is a space
     pop %rdi
     jnz .Lreadnext_end              // If the char is a space, end the read
-    mov %dl, (%rsi)
+
+    pop %al
+    pop %rsi
+    movb %dl, (%rsi)
+    
+    inc %rsi
+    inc %rdi
 
     jmp .Lreadnext_loop
 
