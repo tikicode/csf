@@ -377,11 +377,11 @@ wc_trim_non_alpha:
  */
 	.globl wc_find_or_insert
 wc_find_or_insert:
-    subq $8, %rsp                   // Decrement stack pointer
+    subq $8, %rsp
     movq %rdi, %rcx
 
 .search_loop:
-    cmpq $0, %rdi                   // Check if cur == NULL
+    cmpq $0, %rdi
     je .not_found
 
     call wc_str_compare
@@ -393,17 +393,25 @@ wc_find_or_insert:
 
 .not_found:
     movq $72, %rdi
-    call malloc              // Allocate memory for WordEntry
+    pushq %rsi
+    call malloc
+    popq %rsi
+    pushq %rsi
     call wc_str_copy
+    movq %rax, %rdi 
     movq $0, WORDENTRY_COUNT_OFFSET(%rdi)
     movq %rcx, WORDENTRY_NEXT_OFFSET(%rdi)
-    movq $1, %rdx
-    addq $8, %rsp                   // Align the stack pointer   
+    addq $8, %rsp
+    movq %rdi, %rax
+    popq %rsi
+    movl $0, %edx
+    movw $1, (%edx)    //Why do I seg fault here?????
     ret
 
 .found_match:
-    movq $0, %rdx  
-    addq $8, %rsp                   // Align the stack pointer    
+    addq $8, %rsp
+    movl $0, %edx
+    movw $0, (%edx)
     ret
 
 /*
