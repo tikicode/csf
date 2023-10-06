@@ -424,6 +424,7 @@ wc_find_or_insert:
     movq $0, WORDENTRY_COUNT_OFFSET(%r15)
     movq %r12, WORDENTRY_NEXT_OFFSET(%r15)
     addq $8, %rsp
+    //seems like only value is moving should not be the case
     movq %r15, %rax
     movl $1, (%r14)
 
