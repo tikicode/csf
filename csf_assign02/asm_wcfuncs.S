@@ -227,52 +227,65 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  */
 	.globl wc_readnext
 wc_readnext:
-    subq $8, %rsp                   // Decrement stack pointer
+    pushq %rdi
+    subq $8, %rsp
 
-.Lreadnext_initial:
-    call fgetc                      // Get the next char in the file
-    cmp $-1, %rax                   // Check if c == EOF
+    movq $0, %rdx  //setting a counter equal to 0
+    //pushq %rsi
+    call fgetc
+    //popq %rsi
+    cmp $-1, %rax                  // Check if c == EOF
     je .Lreadnext_failed            // If c == EOF, exit loop
-    
-    push %rdi                       // Push FILE *in to store it
-    call wc_isspace                 // Call the isspace function
+    testq %rax, %rax
+    pushq %rdi
+    movb %al, %dil
+    pushq %rax
+    call wc_isspace
+    popq %rdi
     test %eax, %eax                 // Check if the char is a space
     jnz .Lreadnext_end              // If the char is a space, end the read
-
-    movb %al, (%rsi)               // Store c in the string
-    pop %rdi                        // Restore FILE *in to %rdi
-    incq %rsi                       // Increment string position
-
+    popq %rax
+    //movb %al, (%rsi)
+    incq %rsi
 
 .Lreadnext_loop:
     test %rdi, %rdi
     jz .Lreadnext_end
-    incq %rdi
-    call fgetc                      // Call fgetc(in)
-    cmp $-1, %rax                   // Check if c == EOF
-    je .Lreadnext_end               // If c == EOF, exit loop
 
-    push %rdi                       // Push FILE *in to store it
-    movb %al, %dil                  // Move char to first argument
-    call wc_isspace                 // Call the isspace function
+    popq %rdi
+    pushq %rdi
+    //pushq %rsi
+    call fgetc
+    //popq %rsi
+    cmp $-1, %rax                  // Check if c == EOF
+    je .Lreadnext_end
+    testq %rax, %rax
+    pushq %rdi
+    movb %al, %dil
+    pushq %rax
+    call wc_isspace
+    popq %rdi
     test %eax, %eax                 // Check if the char is a space
     jnz .Lreadnext_end              // If the char is a space, end the read
-
-    movb %dil, (%rsi)               // Store c in the string
-    pop %rdi                        // Restore FILE *in to %rdi
-    incq %rsi                       // Increment string position
+    popq %rax
+    //movb %al, (%rsi)
+    incq %rsi
+    jmp .Lreadnext_loop
 
 .Lreadnext_end:
-    incq %rsi                       // Increment string position
-    movb $0, (%rsi)                 // Null-terminate the string
-    mov $1, %rax                    // Set the return value to 1 (successful)
-    addq $8, %rsp                   // Restore the stack pointer
+    popq %rdi
+    movb $0, (%rsi)
+    addq $8, %rsp
+    movq $1, %rax
     ret
-
 .Lreadnext_failed:
-    movl $0, %eax                   // Set the return value to 0 (failure)
-    addq $8, %rsp                   // Restore the stack pointer
+    popq %rdi
+    addq $8, %rsp
+    movq $0, %rax
     ret
+        
+
+
 
 /*
  * Convert the NUL-terminated character string in the array
@@ -446,7 +459,21 @@ wc_dict_find_or_insert:
  */
 	.globl wc_free_chain
 wc_free_chain:
-    
+    testq %rdi, %rdi
+    je .Lreturn           // if p == NULL, return
+
+.Lloop:
+
+    movq (%rdi), %rax
+
+    call free
+
+    movq %rax, %rdi
+
+    testq %rdi, %rdi
+    jne .Lloop            # if not at end, loop
+
+.Lreturn:
     ret
 
 /*

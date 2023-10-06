@@ -160,11 +160,7 @@ void test_readnext(TestObjs *objs) {
   in = create_input_file(objs->words_1);
 
   ASSERT(1 == wc_readnext(in, buf));
-  // printf("\n");
-  // for (int i = 0; i < 64; i++) { 
-  //   printf("%c", buf[i]);
-  // }
-  // printf("\n");
+  printf("\n\n%s\n\n", buf);
   ASSERT(0 == strcmp("A", (const char *) buf));
 
   ASSERT(1 == wc_readnext(in, buf));
