@@ -125,6 +125,7 @@ wc_str_copy:
     jmp .Lstr_copy_loop             // jump back to the str_copy_loop to copy the next char
 
 .Lstr_copy_end:
+    movb $0, (%rdi)
     addq $8, %rsp                   // Align the stack pointer
     ret                             // return the destination string
 
@@ -227,68 +228,66 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  */
 	.globl wc_readnext
 wc_readnext:
-    subq $8, %rsp
-    push %rsi
+    subq $8, %rsp             
 
-    call fgetc
-    push %al
-    cmp $-1, %eax                  // Check if c == EOF
-    je .Lreadnext_failed            // If c == EOF, exit loop
+    testq %rdi, %rdi
+    jz .Lreadnext_failed
 
-    push %rdi
-    call wc_isspace
-    test %eax, %eax                 // Check if the char is a space
-    pop %rdi
-    jnz .Lreadnext_end              // If the char is a space, end the read
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15 
 
-    pop %al
-    pop %rsi
-    movb %dl, (%rsi)
-    
-    inc %rsi
-    inc %rdi
-
+    movq %rdi, %r12
+    movq %rsi, %r13
+    movl $0, %r14d
+    movq $0, %r15
 
 .Lreadnext_loop:
-    push %rsi
-    test %rdi, %rdi
-    jz .Lreadnext_filled
+    cmpl $MAX_WORDLEN, %r14d
+    je .Lreadnext_end
 
+    movq %r12, %rdi
     call fgetc
-    push %al
+
+    movb %al, %r15b
     cmp $-1, %eax                  // Check if c == EOF
-    je .Lreadnext_failed            // If c == EOF, exit loop
+    je .Lreadnext_end 
 
-    push %rdi
+    movb %r15b, %dil
     call wc_isspace
-    test %eax, %eax                 // Check if the char is a space
-    pop %rdi
-    jnz .Lreadnext_end              // If the char is a space, end the read
+    cmpl $1, %eax                 // Check if the char is a space
+    je .Lreadnext_end              // If the char is a space, end the read
 
-    pop %al
-    pop %rsi
-    movb %dl, (%rsi)
-    
-    inc %rsi
-    inc %rdi
+    movb %r15b, (%r13)
+
+    incq %r13
+    incl %r14d
 
     jmp .Lreadnext_loop
 
-.Lreadnext_filled:
-    dec %rdi
-    movb $0, (%rsi)
+.Lreadnext_end:
+    movb $0, (%r13)
+
+    movl %r14d, %eax
+    mov %r13, %rsi
+    mov %r12, %rdi
+    
+    popq %r15 
+    popq %r14
+    popq %r13
+    popq %r12
+
+    cmpl $0, %eax
+    je .Lreadnext_failed
+
+    movl $1, %eax
     addq $8, %rsp
-    movq $1, %rax
     ret
 
-.Lreadnext_end:
-    movb $0, (%rsi)
-    addq $8, %rsp
-    movq $1, %rax
-    ret
 .Lreadnext_failed:
     addq $8, %rsp
-    movq $0, %rax
+    movl $0, %eax
     ret
         
 
@@ -387,40 +386,64 @@ wc_trim_non_alpha:
 	.globl wc_find_or_insert
 wc_find_or_insert:
     subq $8, %rsp
-    movq %rdi, %rcx
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+    movq %rdi, %r12
+    movq %rsi, %r13
+    movq %rdx, %r14
+    movq %rdi, %r15
 
 .search_loop:
-    cmpq $0, %rdi
-    je .not_found
+    testq %r12, %r12
+    jz .not_found
 
+    movq %r12, %rdi
+    movq %r13, %rsi
     call wc_str_compare
     test %eax, %eax
     jz .found_match
 
-    movq WORDENTRY_NEXT_OFFSET(%rdi), %rdi
+    movq WORDENTRY_NEXT_OFFSET(%r12), %r12
+    test %r12, %r12
+    jz .not_found
     jmp .search_loop
 
 .not_found:
-    movq $72, %rdi
-    pushq %rsi
+    movq $80, %rdi
+    pushq %rdx
     call malloc
-    popq %rsi
-    pushq %rsi
+    movq %rdi, %r15
+    popq %rdx
+    
+    leaq WORDENTRY_WORD_OFFSET(%rax), %r15
+    movq %r13, %rsi
     call wc_str_copy
-    movq %rax, %rdi 
-    movq $0, WORDENTRY_COUNT_OFFSET(%rdi)
-    movq %rcx, WORDENTRY_NEXT_OFFSET(%rdi)
+
+    movq $0, WORDENTRY_COUNT_OFFSET(%r15)
+    movq %r12, WORDENTRY_NEXT_OFFSET(%r15)
     addq $8, %rsp
-    movq %rdi, %rax
-    popq %rsi
-    movl $0, %edx
-    movw $1, (%edx)    //Why do I seg fault here?????
+    movq %r15, %rax
+    movl $1, (%r14)
+
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    
     ret
 
 .found_match:
     addq $8, %rsp
-    movl $0, %edx
-    movw $0, (%edx)
+    mov %r15, %rax
+    movl $0, (%r14)
+
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+
     ret
 
 /*
@@ -474,22 +497,23 @@ wc_dict_find_or_insert:
  */
 	.globl wc_free_chain
 wc_free_chain:
-    testq %rdi, %rdi
-    je .Lreturn           // if p == NULL, return
+  subq $8, %rsp 
+  pushq %r12
+  movq %rdi, %r12
 
-.Lloop:
+.Lfree_chain_loop:
+  testq %r12, %r12
+  jz .Lfree_chain_end
 
-    movq (%rdi), %rax
+  movq %r12, %rdi
+  movq WORDENTRY_NEXT_OFFSET(%r12), %r12
+  call free
+  jmp .Lfree_chain_loop
 
-    call free
-
-    movq %rax, %rdi
-
-    testq %rdi, %rdi
-    jne .Lloop            # if not at end, loop
-
-.Lreturn:
-    ret
+.Lfree_chain_end:
+  popq %r12
+  addq $8, %rsp
+  ret
 
 /*
 vim:ft=gas:
