@@ -454,6 +454,8 @@ wc_find_or_insert:
   movl $0, WORDENTRY_COUNT_OFFSET(%r12)  // Initialize count to 0
   movq %r15, WORDENTRY_NEXT_OFFSET(%r12) // Put the new object at the top of the linked list
 
+  
+
   movq %r12, %rax                   // Move the new object to the return register
   movl $1, (%r14)                   // Set inserted to one
 
