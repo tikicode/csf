@@ -76,23 +76,27 @@ wc_hash:
  */
   .globl wc_str_compare
 wc_str_compare:
-    subq $8, %rsp                 // Decrement stack pointer by 8 bytes for alignment
     pushq %r12                    // Save register r12 onto the stack
     pushq %r13                    // Save register r13 onto the stack
 
-    testq %rdi, %rdi              // Test if lhs (rdi) is null
-    je .LstrcompLhsIsNull         // Jump if lhs is null
-    testq %rsi, %rsi              // Test if rhs (rsi) is null
-    je .LstrcompRhsIsNullWhenLhsNotNull  // Jump if rhs is null but lhs is not
+    cmpq %rdi, %rsi               // Compare lhs and rhs pointers
+    je .LstrcompEqual
+
+    testq %rdi, %rdi              // Test if lhs pointer is null
+    je .LstrcompLhsIsNull
+
+    testq %rsi, %rsi              // Test if rhs pointer is null
+    je .LstrcompRhsIsNullWhenLhsNotNull
 
 .LstrcompCompareLoop:
     movb (%rdi), %r12b            // Load byte from lhs into r12
     movb (%rsi), %r13b            // Load byte from rhs into r13
 
     testb %r12b, %r12b            // Test if byte from lhs is null
-    jz .LstrcompEndOfLhs          // Jump if lhs byte is null
+    jz .LstrcompEndOfLhs
+
     testb %r13b, %r13b            // Test if byte from rhs is null
-    jz .LstrcompEndOfRhs          // Jump if rhs byte is null
+    jz .LstrcompEndOfRhs
 
     cmpb %r12b, %r13b             // Compare bytes from lhs and rhs
     jg .LstrcompLhsGreater        // Jump if lhs byte is greater
@@ -103,22 +107,20 @@ wc_str_compare:
     jmp .LstrcompCompareLoop      // Loop to next character comparison
 
 .LstrcompEndOfLhs:
-    testb %r13b, %r13b            // Test if rhs byte is null
+    testb %r13b, %r13b            // Test if byte from rhs is null
     jnz .LstrcompRhsGreater       // Jump if rhs byte is not null
     jmp .LstrcompEqual            // Else, both strings are equal
 
 .LstrcompEndOfRhs:
-    testb %r12b, %r12b            // Test if lhs byte is null
+    testb %r12b, %r12b            // Test if byte from lhs is null
     jnz .LstrcompLhsGreater       // Jump if lhs byte is not null
     jmp .LstrcompEqual            // Else, both strings are equal
 
 .LstrcompLhsIsNull:
-    testq %rsi, %rsi              // Test if rhs is null
-    jnz .LstrcompRhsGreater       // Jump if rhs is not null
-    jmp .LstrcompEqual            // Else, both strings are equal
+    jmp .LstrcompRhsGreater       // Jump to function exit
 
 .LstrcompRhsIsNullWhenLhsNotNull:
-    jmp .LstrcompLhsGreater       // Lhs is greater since rhs is null but lhs is not
+    jmp .LstrcompLhsGreater       // Jump to function exit
 
 .LstrcompLhsGreater:
     movl $1, %eax                 // Set result to 1 (lhs is greater)
@@ -134,7 +136,6 @@ wc_str_compare:
 .LstrcompExit:
     popq %r13                     // Restore r13 from the stack
     popq %r12                     // Restore r12 from the stack
-    addq $8, %rsp                 // Restore the stack pointer
     ret
 
 
@@ -147,24 +148,23 @@ wc_str_compare:
  */
 	.globl wc_str_copy
 wc_str_copy:
-  subq $8, %rsp                    // Decrement stack pointer
-
-  pushq %r12                       // Local variable for the destination
-  pushq %r13                       // Local variable for the temp string
-
-  movq %rsi, %r12                  // Move source to local variable
+  subq $8, %rsp                   // Decrement stack pointer
+  pushq %r12                      // Local variable for the destination
+  pushq %r13                      // Local variable for the temp string
+  movq %rsi, %r12                 // Move source to local variable
 
 .Lstr_copy_loop:
 
-  cmpb $0, (%r12)                  // Check if the null terminator has been reached
+  cmpb $0, (%r12)                 // Check if the null terminator has been reached
   je .Lstr_copy_end               // Jump to the end condition
+
   movb (%r12), %r13b              // Move the char into the destination temp
 
-  movb %r13b, (%rdi)              // Mve temp character to destination
+  movb %r13b, (%rdi)              // Move temp character to destination
 
   incq %rdi                       // Increment the destination register to get the next writable index
-  incq %r12                       // Increment source
 
+  incq %r12                       // Increment source
   jmp .Lstr_copy_loop             // Jump back to the str_copy_loop to copy the next char
 
 .Lstr_copy_end:
@@ -552,8 +552,7 @@ wc_find_or_insert:
  */
 	.globl wc_dict_find_or_insert
 wc_dict_find_or_insert:
-    // Save callee-saved registers
-    pushq %r12
+    pushq %r12                       // Save callee-saved registers
     pushq %r13
     pushq %r14
     pushq %r15
