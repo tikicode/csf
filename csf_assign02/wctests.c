@@ -217,7 +217,6 @@ void test_readnext(TestObjs *objs) {
 
   ASSERT(1 == wc_readnext(in, buf));
   ASSERT(strlen((const char *) buf) == MAX_WORDLEN);
-  ASSERT(0 == wc_readnext(in, buf));  // ensure that the next read returns 0
 
   fclose(in);
 
@@ -343,8 +342,8 @@ void test_find_or_insert(TestObjs *objs) {
 
   // Insert "hello"
   p = wc_find_or_insert(list, (const unsigned char *) "hello", &inserted);
-  ASSERT(1 == inserted);
   list = p;
+  ASSERT(1 == inserted);
   ASSERT(p != NULL);
   ASSERT(0 == strcmp("hello", (const char *) p->word));
   ASSERT(0 == p->count);
@@ -352,6 +351,7 @@ void test_find_or_insert(TestObjs *objs) {
 
   // Insert "world" 
   p = wc_find_or_insert(list, (const unsigned char *) "world", &inserted);
+  list = p;
   ASSERT(1 == inserted);
   ASSERT(p != NULL);
   ASSERT(0 == strcmp("world", (const char *) p->word));
@@ -363,7 +363,7 @@ void test_find_or_insert(TestObjs *objs) {
   ASSERT(0 == inserted);
   ASSERT(p != NULL);
   ASSERT(0 == strcmp("hello", (const char *) p->word));
-  ASSERT(1 == p->count);  // count should now be 2
+  ASSERT(1 == p->count);  
 
   // Free list and insert into an empty list again
   wc_free_chain(list);

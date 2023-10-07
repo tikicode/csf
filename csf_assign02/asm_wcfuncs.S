@@ -255,6 +255,23 @@ wc_readnext:
     movl $0, %r14d                // Initialize counter to zero
     movq $0, %r15                 // Ensure char var is empty
 
+.Lreadnext_space:
+  movq %r12, %rdi                   // Restore %rdi to FILE *in for the call to fgetc
+  call fgetc                        // Get next char from file
+
+  movb %al, %r15b                   // Move char return from fgetc to local char var
+  cmp $-1, %eax                     // Check if c == EOF
+  je .Lreadnext_end                 // If EOF, end read
+
+  movb %r15b, %dil                  // Move char from fgetc to first argument for input into isspace
+  call wc_isspace                   // Call isspace
+  cmpl $1, %eax                     // Check if the char is a space
+  je .Lreadnext_space               // If the char is a space, continue 
+
+  movb %r15b, (%r13)                // Move the char to the destination string
+  incq %r13                         // Move to the next position of the destination string
+  incl %r14d                        // Increment the counter
+  
 .Lreadnext_loop:
     cmpl $MAX_WORDLEN, %r14d      // Check count against max size of dest string (64)
     je .Lconsume_extra            // If max size reached, consume extra characters
