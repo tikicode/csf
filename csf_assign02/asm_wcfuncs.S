@@ -45,7 +45,7 @@ wc_hash:
 
 .Lhash_loop:
   movzbl (%rdi), %r13d            // Load next byte (character) from memory to eax
-  testb %r13b, %r13b              // Test for null terminator
+  test %r13d, %r13d               // Test for null terminator
   jz .Lhash_end                   // If null, end the loop
   imul $33, %r12d, %r12d          // Multiply hash_code by 33
   addl %r13d, %r12d               // Add the character to hash_code
@@ -125,10 +125,9 @@ wc_str_copy:
 
 .Lstr_copy_loop:
   movb (%rsi), %r12b              // Load a byte (char) from string source index into the temp register
-  movb %r12b, (%rdi)              // Move the char into the destination index
-
   cmpb $0, %r12b                  // Check if the null terminator has been reached
   je .Lstr_copy_end               // Jump to the end condition
+  movb %r12b, (%rdi)              // Move the char into the destination index
 
   incq %rdi                       // Increment the destination register to get the next writable index
   incq %rsi                       // Increment the source register to get the next char index
@@ -240,25 +239,45 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  */
 	.globl wc_readnext
 wc_readnext:
-    subq $8, %rsp                 // Decrement stack pointer
+  subq $8, %rsp                     // Decrement stack pointer
 
-    testq %rdi, %rdi              // Check if FILE *in is null
-    jz .Lreadnext_failed          // Jump to failed read if null
+  testq %rdi, %rdi                  // Check if FILE *in is null
+  jz .Lreadnext_failed              // Jump to failed read if null
 
-    pushq %r12                    // Local var for FILE *in
-    pushq %r13                    // Local var for the destination string
-    pushq %r14                    // Local var for the counter
-    pushq %r15                    // Local var for chars
+  pushq %r12                        // Local var for FILE *in
+  pushq %r13                        // Local var for the destination string
+  pushq %r14                        // Local var for the counter
+  pushq %r15                        // Local var for chars
 
-    movq %rdi, %r12               // Put FILE *in in local
-    movq %rsi, %r13               // Put destination in local
-    movl $0, %r14d                // Initialize counter to zero
-    movq $0, %r15                 // Ensure char var is empty
+  movq %rdi, %r12                   // Put FILE *in in local
+  movq %rsi, %r13                   // Put destination in local
+  movl $0, %r14d                    // Initialize counter to zero
+  movq $0, %r15                     // Ensure char var is empty
 
 .Lreadnext_space:
+movq %r12, %rdi                     // Restore %rdi to FILE *in for the call to fgetc
+call fgetc                          // Get next char from file
+
+movb %al, %r15b                     // Move char return from fgetc to local char var
+cmp $-1, %eax                       // Check if c == EOF
+je .Lreadnext_end                   // If EOF, end read
+
+movb %r15b, %dil                    // Move char from fgetc to first argument for input into isspace
+call wc_isspace                     // Call isspace
+cmpl $1, %eax                       // Check if the char is a space
+je .Lreadnext_space                 // If the char is a space, continue 
+
+movb %r15b, (%r13)                  // Move the char to the destination string
+incq %r13                           // Move to the next position of the destination string
+incl %r14d                          // Increment the counter
+
+.Lreadnext_loop:
+  cmpl $MAX_WORDLEN, %r14d          // Check count against max size of dest string (64)
+  je .Lconsume_extra                // If max size reached, consume extra characters
+
   movq %r12, %rdi                   // Restore %rdi to FILE *in for the call to fgetc
   call fgetc                        // Get next char from file
-
+  
   movb %al, %r15b                   // Move char return from fgetc to local char var
   cmp $-1, %eax                     // Check if c == EOF
   je .Lreadnext_end                 // If EOF, end read
@@ -266,72 +285,52 @@ wc_readnext:
   movb %r15b, %dil                  // Move char from fgetc to first argument for input into isspace
   call wc_isspace                   // Call isspace
   cmpl $1, %eax                     // Check if the char is a space
-  je .Lreadnext_space               // If the char is a space, continue 
+  je .Lreadnext_end                 // If the char is a space, end the read
 
   movb %r15b, (%r13)                // Move the char to the destination string
+
   incq %r13                         // Move to the next position of the destination string
   incl %r14d                        // Increment the counter
-  
-.Lreadnext_loop:
-    cmpl $MAX_WORDLEN, %r14d      // Check count against max size of dest string (64)
-    je .Lconsume_extra            // If max size reached, consume extra characters
 
-    movq %r12, %rdi               // Restore %rdi to FILE *in for the call to fgetc
-    call fgetc                    // Get next char from file
-    
-    movb %al, %r15b               // Move char return from fgetc to local char var
-    cmp $-1, %eax                 // Check if c == EOF
-    je .Lreadnext_end             // If EOF, end read
+  jmp .Lreadnext_loop               // Get the next char
 
-    movb %r15b, %dil             // Move char from fgetc to first argument for input into isspace
-    call wc_isspace               // Call isspace
-    cmpl $1, %eax                 // Check if the char is a space
-    je .Lreadnext_end             // If the char is a space, end the read
+.Lconsume_extra:                    // New label to consume extra characters
+  movq %r12, %rdi                   // Restore %rdi to FILE *in for the call to fgetc
+  call fgetc                        // Get next char from file
 
-    movb %r15b, (%r13)            // Move the char to the destination string
+  cmp $-1, %eax                     // Check if c == EOF
+  je .Lreadnext_end                 // If EOF, end read
 
-    incq %r13                     // Move to the next position of the destination string
-    incl %r14d                    // Increment the counter
+  movb %al, %dil                    // Move char from fgetc to first argument for input into isspace
+  call wc_isspace                   // Call isspace
+  cmpl $1, %eax                     // Check if the char is a space
+  je .Lreadnext_end                 // If the char is a space, end the read
 
-    jmp .Lreadnext_loop           // Get the next char
-
-.Lconsume_extra:                  // New label to consume extra characters
-    movq %r12, %rdi               // Restore %rdi to FILE *in for the call to fgetc
-    call fgetc                    // Get next char from file
-
-    cmp $-1, %eax                 // Check if c == EOF
-    je .Lreadnext_end             // If EOF, end read
-
-    movb %al, %dil               // Move char from fgetc to first argument for input into isspace
-    call wc_isspace               // Call isspace
-    cmpl $1, %eax                 // Check if the char is a space
-    je .Lreadnext_end             // If the char is a space, end the read
-
-    jmp .Lconsume_extra           // Consume next extra char
+  jmp .Lconsume_extra               // Consume next extra char
 
 .Lreadnext_end:
-    movb $0, (%r13)               // Null terminate the destination string
+  movb $0, (%r13)                   // Null terminate the destination string
 
-    movl %r14d, %eax              // Move the counter to the output val
-    mov %r13, %rsi                // Move the local FILE *in and restore to input
-    mov %r12, %rdi                // Restore destination string to the input
+  movl %r14d, %eax                  // Move the counter to the output val
+  mov %r13, %rsi                    // Move the local FILE *in and restore to input
+  mov %r12, %rdi                    // Restore destination string to the input
 
-    popq %r15                     // Restore value of local vars
-    popq %r14
-    popq %r13
-    popq %r12
+  popq %r15                         // Restore value of local vars
+  popq %r14
+  popq %r13
+  popq %r12
 
-    cmpl $0, %eax                 // Check if the counter is 0, if so, the read has failed
-    je .Lreadnext_failed
+  cmpl $0, %eax                     // Check if the counter is 0, if so, the read has failed
+  je .Lreadnext_failed
 
-    movl $1, %eax                 // If the read was successful, return one
-    addq $8, %rsp                 // Restore the stack ptr
-    ret
+  movl $1, %eax                     // If the read was successful, return one
+  addq $8, %rsp                     // Restore the stack ptr
+  ret
 
 .Lreadnext_failed:
-    movl $0, %eax                 // If the read failed, return zero
-    addq $8, %rsp                 // Restore the stack ptr
-    ret
+  movl $0, %eax                     // If the read failed, return zero
+  addq $8, %rsp                     // Restore the stack ptr
+  ret
 
 /*
  * Convert the NUL-terminated character string in the array
@@ -379,43 +378,37 @@ wc_tolower:
  */
 	.globl wc_trim_non_alpha
 wc_trim_non_alpha:
-  subq $8, %rsp                     // Align the stack pointer
-.Lloop:
-  movb (%rdi), %al                  // get first char
-  testb %al, %al
-  jz .Ltrim
-  incq %rdi
-  jmp .Lloop
-.Ltrim:
-  decq %rdi
-  movb (%rdi), %al
-  testb %al, %al
-  jz .Ltrim_non_alpha_end
-  jmp .Ltrim_isalpha
-  jnz .Ltrim_non_alpha_end
-  jmp .Ltrim
-.Ltrim_isalpha:
-  cmp $65, %al      
-  jl .Ltrim                      
+  subq $8, %rsp                     // Decrement stack pointer
+  push %r12                         // Local var for char
+  push %r13                         // Local var to track beginning of string
+  movq %rsi, %r13                   // Initialize local var to address of the beginning of the string
 
-  cmp $90, %al      
-  jle .Ltrim_non_alpha_end      
+.Ltrim_non_alpha_loop:
+  movb (%rsi), %r12b                // Load a byte (char) into the al register
+  testb %r12b, %r12b                // Check if the char is the null terminator
+  jz .Ltrim_non_alpha               // If the end of the string is reached, begin trimming
 
+  incq %rsi                         // Otherwise, go to the next char
+  jmp .Ltrim_non_alpha_loop         // Continue the loop
 
-  cmp $97, %al     
-  jl .Ltrim          
+.Ltrim_non_alpha:
+  decq %rsi                         // Move to the previous char
+  test %rsi, %r13                   // Check if the start of the string was reached
+  jz .Ltrim_non_alpha_end           // If it was reached, end the loop
 
+  movb (%rsi), %dil                 // Move the char into %dil for the call to isalpha
+  call wc_isalpha                   // Call the isalpha function
+  test %eax, %eax                   // Check if the character is alphanumeric from the function result
+  jnz .Ltrim_non_alpha_end          // If alphanumeric, stop trimming and return
 
-  cmp $122, %al     
-  jg .Ltrim            
+  movb $0, (%rsi)                   // Replace char with a null terminator
+  jmp .Ltrim_non_alpha              // Check if the next character is not alphanumeric
 
 .Ltrim_non_alpha_end:
-  incq %rdi
-  movb $0, (%rdi)
-  addq $8, %rsp
-  ret
-
-
+  addq $8, %rsp                     // Align stack pointer
+  pop %r13                          // Restore value of %r13
+  pop %r12                          // Restore value of %r12
+  ret                               // Void return
 
 /*
  * Search the specified linked list of WordEntry objects for an object
@@ -448,11 +441,11 @@ wc_find_or_insert:
   movq %rdi, %r15                   // Assign head tracker to head
 
 .Lsearch_loop:
-  testq %r12, %r12                  // Check if the WordEntry list is null
-  jz .Lnot_found                    // Insert a new entry
+  cmpq $0, %r12
+  je .Lnot_found                    // Insert a new entry
 
-  movq %r12, %rdi                   // Move the current WordEntry to rdi
-  movq %r13, %rsi                   // Move the target word to rsi 
+  movq %r12, %rsi                   // Move the current WordEntry to rdi
+  movq %r13, %rdi                   // Move the target word to rsi 
   call wc_str_compare               // Compare the words
   test %eax, %eax                   // Check if the words are the same
   jz .Lfound_match                  // Return cur pos
@@ -470,8 +463,6 @@ wc_find_or_insert:
 
   movl $0, WORDENTRY_COUNT_OFFSET(%r12)  // Initialize count to 0
   movq %r15, WORDENTRY_NEXT_OFFSET(%r12) // Put the new object at the top of the linked list
-
-  
 
   movq %r12, %rax                   // Move the new object to the return register
   movl $1, (%r14)                   // Set inserted to one
@@ -510,57 +501,57 @@ wc_find_or_insert:
  */
 	.globl wc_dict_find_or_insert
 wc_dict_find_or_insert:
-wc_dict_find_or_insert:
-    // Preserve callee-saved registers
-    pushq %r12
-    pushq %r13
-    pushq %r14
-    pushq %r15
-    pushq %rbp
+  subq $8, %rsp
+  pushq %r12                        // Preserve callee-saved registers
+  pushq %r13
+  pushq %r14
+  pushq %r15
+  pushq %rbx
 
-    // Store input arguments for clarity and future use
-    movq %rdi, %r12  // Save pointer to buckets in r12
-    movl %esi, %r13d // Save num_buckets in r13d
-    movq %rdx, %r14  // Save pointer to source word in r14
+  movq %rdi, %r12                   // Save pointer to buckets in r12
+  movl %esi, %r13d                  // Save num_buckets in r13d
+  movq %rdx, %r14                   // Save pointer to source word in r14
 
-    // Calculate hash index of the source word
-    movq %r14, %rdi  // Set source word as argument for wc_hash
-    call wc_hash
-    xorl %edx, %edx  // Clear edx for division
-    divl %r13d       // Divide, result in eax, remainder in edx
-    movl %edx, %r15d // Store remainder (hash index) in r15d
+  movq %r14, %rdi                   // Set source word as argument for wc_hash
+  call wc_hash
+  movq %r14, %rdi
+  xorl %edx, %edx                   // Clear edx for division
+  divl %r13d                        // Divide, result in eax, remainder in edx
+  movl %edx, %r15d                  // Store remainder (hash index) in r15d
 
-    // Locate appropriate bucket using the hash index
-    movq (%r12, %r15, 8), %rdi  // Retrieve bucket's head pointer
+  
+  lea (%r12, %r15, 8), %rdi        // Locate appropriate bucket using the hash index
+                                    // Move bucket to first argument
 
-    // Set up arguments for wc_find_or_insert
-    movq %r14, %rsi  // Source string
-    leaq -8(%rbp), %r13  // Address of 'inserted' local variable
-    movq $0, (%r13)  // Initialize 'inserted' to zero
-    movq %r13, %rdx  // Address for 'inserted' as third argument
+  movq %r14, %rsi                   // Move bucket to second argument
 
-    call wc_find_or_insert
+  movq %rsp, %rbx
+  leaq -8(%rbx), %r13               // Address of 'inserted' local variable
+  movq $0, (%r13)                   // Initialize 'inserted' to zero
+  movq %r13, %rdx                   // Address for 'inserted' as third argument
 
-    // Check and act on the inserted flag
-    cmpq $1, (%r13)
-    je .LupdateBucket
+  movq %r13, %rdx
+  call wc_find_or_insert
 
-.LskipUpdate:
-    addq $8, %rsp   // Realign stack after 'inserted'
-    jmp .Lexit
+  // Check and act on the inserted flag
+  cmpq $1, (%r13)
+  je .LupdateBucket
+  jmp .Lexit
 
 .LupdateBucket:
-    // Update the bucket with the new WordEntry if needed
-    movq %rax, (%r12, %r15, 8)
+  // Update the bucket with the new WordEntry if needed
+  movq %rax, (%r12, %r15, 8)
+  jmp .Lexit
 
 .Lexit:
-    // Restore callee-saved registers and return
-    popq %rbp
-    popq %r15
-    popq %r14
-    popq %r13
-    popq %r12
-    ret
+  // Restore callee-saved registers and return
+  addq $8, %rsp
+  popq %rbx
+  popq %r15
+  popq %r14
+  popq %r13
+  popq %r12
+  ret
 
 /*
  * Free all of the nodes in given linked list of WordEntry objects.

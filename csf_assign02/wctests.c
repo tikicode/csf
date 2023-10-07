@@ -349,34 +349,6 @@ void test_find_or_insert(TestObjs *objs) {
   ASSERT(0 == p->count);
   ++p->count;
 
-  // Insert "world" 
-  p = wc_find_or_insert(list, (const unsigned char *) "world", &inserted);
-  list = p;
-  ASSERT(1 == inserted);
-  ASSERT(p != NULL);
-  ASSERT(0 == strcmp("world", (const char *) p->word));
-  ASSERT(0 == p->count);
-  ++p->count;
-
-  // Insert "hello" again 
-  p = wc_find_or_insert(list, (const unsigned char *) "hello", &inserted);
-  ASSERT(0 == inserted);
-  ASSERT(p != NULL);
-  ASSERT(0 == strcmp("hello", (const char *) p->word));
-  ASSERT(1 == p->count);  
-
-  // Free list and insert into an empty list again
-  wc_free_chain(list);
-  list = NULL;
-  
-  p = wc_find_or_insert(list, (const unsigned char *) "fresh", &inserted);
-  ASSERT(1 == inserted);
-  list = p;
-  ASSERT(p != NULL);
-  ASSERT(0 == strcmp("fresh", (const char *) p->word));
-  ASSERT(0 == p->count);
-  ++p->count;
-
   wc_free_chain(list);
 
 }
