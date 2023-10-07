@@ -479,63 +479,55 @@ wc_trim_non_alpha:
 	.globl wc_find_or_insert
 wc_find_or_insert:
   subq $8, %rsp
-  pushq %r12                        // Local var to track cur pos of WordEntry
-  pushq %r13                        // Local var to track string
-  pushq %r14                        // Local var to track inserted
-  pushq %r15                        // Local var to track *head
+  pushq %rbp                        // Local var to store current WordEntry
+  pushq %rbx                        // Local var to store string
+  pushq %r13                        // Local var to store inserted
+  pushq %r14                        // Local var to store head
 
-  movq %rdi, %r12                   // Assign cur pos to head
-  movq %rsi, %r13                   // Assign string var to s
-  movq %rdx, %r14                   // Assign inserted var to inserted
-  movq %rdi, %r15                   // Assign head tracker to head
+  movq %rdi, %r14                   // Store *head in r14
+  movq %rsi, %rbx                   // Store string var s in rbx
+  movq %rdx, %r13                   // Store inserted in r13
+  movq %r14, %rbp                   // Current WordEntry set to head
 
-.Lsearch_loop:
-  cmpq $0, %r12
-  je .Lnot_found                    // Insert a new entry
+.LfoiSearchList:
+  testq %rbp, %rbp                  // Test if current WordEntry is null
+  jz .LfoiCreateNewWord             // If null, create a new entry
 
-  movq %r12, %rsi                   // Move the current WordEntry to rdi
-  movq %r13, %rdi                   // Move the target word to rsi 
-  call wc_str_compare               // Compare the words
-  test %eax, %eax                   // Check if the words non zer0 ***DIF
-  jz .Lfound_match                  // Return cur pos
+  movq %rbp, %rsi                   // Current WordEntry to rsi for comparison
+  movq %rbx, %rdi                   // Set target string to rdi
+  call wc_str_compare               // Compare strings
+  test %eax, %eax
+  jz .LfoiFoundWord                 // If match found, return the current WordEntry
 
-  movq WORDENTRY_NEXT_OFFSET(%r12), %r12 // Move to the next WordEntry object in the linked list
-  jmp .Lsearch_loop                 // Continue searching
+  movq WORDENTRY_NEXT_OFFSET(%rbp), %rbp // Navigate to the next WordEntry object
+  jmp .LfoiSearchList
 
-.Lnot_found:
-  movq $80, %rdi                    // Move 80 (size of WordEntry obj) to the first input var %rdi for malloc
-  call malloc                       // Allocate a new WordEntry object
-  movq %rax, %r12                   // Move result to the cur pos
+.LfoiCreateNewWord:
+  movq $80, %rdi                    // Size of WordEntry object for malloc
+  call malloc                       // Allocate memory
+  movq %rax, %rbp                   // Assign newly allocated memory to current WordEntry
 
-  leaq WORDENTRY_WORD_OFFSET(%r12), %rdi
+  movq %rbx, %rsi
+  leaq WORDENTRY_WORD_OFFSET(%rbp), %rdi
+  call wc_str_copy                  // Copy string to new WordEntry
 
-  movq %r13, %rsi                   // Move the target string into %rsi for copying
-  call wc_str_copy                  // Copy the target string into the new WordEntry object
+  movq %r14, WORDENTRY_NEXT_OFFSET(%rbp) // Link new object to the start of the list
+  movl $0, WORDENTRY_COUNT_OFFSET(%rbp)  // Initialize count to 0
 
-  movl $0, WORDENTRY_COUNT_OFFSET(%r12)  // Initialize count to 0
-  movq %r15, WORDENTRY_NEXT_OFFSET(%r12) // Put the new object at the top of the linked list
+  movl $1, (%r13)                   // Set inserted flag to 1
+  movq %rbp, %rax                   // Prepare new WordEntry for return
+  jmp .LfoiEnd
 
-  movq %r12, %rax                   // Move the new object to the return register
-  movl $1, (%r14)                   // Set inserted to one
+.LfoiFoundWord:
+  movl $0, (%r13)                   // Set inserted flag to 0
+  movq %rbp, %rax                   // Prepare the current WordEntry for return
 
-  popq %r15                         // Restore local variables
+.LfoiEnd:
   popq %r14
   popq %r13
-  popq %r12
-  
-  addq $8, %rsp                     // Align stack ptr
-  ret                               // Return the new WordEntry
-
-.Lfound_match:
-  movq %r12, %rax                   // Move the cur WordEntry to the return address
-  movl $0, (%r14)                   // Set inserted to zero
-
-  popq %r15                         // Restore local variables
-  popq %r14
-  popq %r13
-  popq %r12
-
-  addq $8, %rsp                     // Align stack ptr
+  popq %rbx
+  popq %rbp
+  addq $8, %rsp
   ret
 
 /*
