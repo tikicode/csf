@@ -240,67 +240,81 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  */
 	.globl wc_readnext
 wc_readnext:
-  subq $8, %rsp                     // Decrement stack pointer                       
+    subq $8, %rsp                 // Decrement stack pointer
 
-  testq %rdi, %rdi                  // Check if FILE *in is null
-  jz .Lreadnext_failed              // Jump to failed read if null
+    testq %rdi, %rdi              // Check if FILE *in is null
+    jz .Lreadnext_failed          // Jump to failed read if null
 
-  pushq %r12                        // Local var for FILE *in
-  pushq %r13                        // Local var for the destination string
-  pushq %r14                        // Local var for the counter
-  pushq %r15                        // Local var for chars 
+    pushq %r12                    // Local var for FILE *in
+    pushq %r13                    // Local var for the destination string
+    pushq %r14                    // Local var for the counter
+    pushq %r15                    // Local var for chars
 
-  movq %rdi, %r12                   // Put FILE *in in local
-  movq %rsi, %r13                   // Put destination in local
-  movl $0, %r14d                    // Initialize counter to zero
-  movq $0, %r15                     // Ensure char var is empty
+    movq %rdi, %r12               // Put FILE *in in local
+    movq %rsi, %r13               // Put destination in local
+    movl $0, %r14d                // Initialize counter to zero
+    movq $0, %r15                 // Ensure char var is empty
 
 .Lreadnext_loop:
-  cmpl $MAX_WORDLEN, %r14d          // Check count against max size of dest string (64)
-  je .Lreadnext_end                 // If max size reached, end read
+    cmpl $MAX_WORDLEN, %r14d      // Check count against max size of dest string (64)
+    je .Lconsume_extra            // If max size reached, consume extra characters
 
-  movq %r12, %rdi                   // Restore %rdi to FILE *in for the call to fgetc
-  call fgetc                        // Get next char from file
+    movq %r12, %rdi               // Restore %rdi to FILE *in for the call to fgetc
+    call fgetc                    // Get next char from file
 
-  movb %al, %r15b                   // Move char return from fgetc to local char var
-  cmp $-1, %eax                     // Check if c == EOF
-  je .Lreadnext_end                 // If EOF, end read
+    movb %al, %r15b               // Move char return from fgetc to local char var
+    cmp $-1, %eax                 // Check if c == EOF
+    je .Lreadnext_end             // If EOF, end read
 
-  movb %r15b, %dil                  // Move char from fgetc to first argument for input into isspace
-  call wc_isspace                   // Call isspace
-  cmpl $1, %eax                     // Check if the char is a space
-  je .Lreadnext_end                 // If the char is a space, end the read
+    movb %r15b, %dil             // Move char from fgetc to first argument for input into isspace
+    call wc_isspace               // Call isspace
+    cmpl $1, %eax                 // Check if the char is a space
+    je .Lreadnext_end             // If the char is a space, end the read
 
-  movb %r15b, (%r13)                // Move the char to the destination string
+    movb %r15b, (%r13)            // Move the char to the destination string
 
-  incq %r13                         // Move to the next position of the destination string
-  incl %r14d                        // Increment the counter
+    incq %r13                     // Move to the next position of the destination string
+    incl %r14d                    // Increment the counter
 
-  jmp .Lreadnext_loop               // Get the next char
+    jmp .Lreadnext_loop           // Get the next char
+
+.Lconsume_extra:                  // New label to consume extra characters
+    movq %r12, %rdi               // Restore %rdi to FILE *in for the call to fgetc
+    call fgetc                    // Get next char from file
+
+    cmp $-1, %eax                 // Check if c == EOF
+    je .Lreadnext_end             // If EOF, end read
+
+    movb %al, %dil               // Move char from fgetc to first argument for input into isspace
+    call wc_isspace               // Call isspace
+    cmpl $1, %eax                 // Check if the char is a space
+    je .Lreadnext_end             // If the char is a space, end the read
+
+    jmp .Lconsume_extra           // Consume next extra char
 
 .Lreadnext_end:
-  movb $0, (%r13)                   // Null terminate the destination string
+    movb $0, (%r13)               // Null terminate the destination string
 
-  movl %r14d, %eax                  // Move the counter to the output val
-  mov %r13, %rsi                    // Move the local FILE *in and restore to input
-  mov %r12, %rdi                    // Restore destination string to the input
-  
-  popq %r15                         // Restore value of local vars
-  popq %r14
-  popq %r13
-  popq %r12
+    movl %r14d, %eax              // Move the counter to the output val
+    mov %r13, %rsi                // Move the local FILE *in and restore to input
+    mov %r12, %rdi                // Restore destination string to the input
 
-  cmpl $0, %eax                     // Check if the counter is 0, if so, the read has failed
-  je .Lreadnext_failed
+    popq %r15                     // Restore value of local vars
+    popq %r14
+    popq %r13
+    popq %r12
 
-  movl $1, %eax                     // If the read was successful, return one
-  addq $8, %rsp                     // Restore the stack ptr
-  ret
+    cmpl $0, %eax                 // Check if the counter is 0, if so, the read has failed
+    je .Lreadnext_failed
+
+    movl $1, %eax                 // If the read was successful, return one
+    addq $8, %rsp                 // Restore the stack ptr
+    ret
 
 .Lreadnext_failed:
-  movl $0, %eax                     // If the read failed, return zero
-  addq $8, %rsp                     // Restore the stack ptr
-  ret
+    movl $0, %eax                 // If the read failed, return zero
+    addq $8, %rsp                 // Restore the stack ptr
+    ret
 
 /*
  * Convert the NUL-terminated character string in the array
