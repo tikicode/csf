@@ -214,7 +214,7 @@ void test_readnext(TestObjs *objs) {
   fputs(very_long_word, in);
   fclose(in);
   in = fopen("very_long_word.txt", "r");
-  
+
   ASSERT(1 == wc_readnext(in, buf));
   ASSERT(strlen((const char *) buf) == MAX_WORDLEN);
   ASSERT(0 == wc_readnext(in, buf));  // ensure that the next read returns 0
@@ -277,6 +277,8 @@ void test_find_or_insert(TestObjs *objs) {
   ASSERT(0 == strcmp("ax's", (const char *) p->word));
   ASSERT(1 == p->count);
   ++p->count;
+
+  wc_free_chain(list);
 
   // Insert "hello"
   p = wc_find_or_insert(list, (const unsigned char *) "hello", &inserted);
