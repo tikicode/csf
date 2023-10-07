@@ -74,45 +74,70 @@ wc_hash:
  * C function prototype:
  *    int wc_str_compare(const unsigned char *lhs, const unsigned char *rhs);
  */
-	.globl wc_str_compare
+  .globl wc_str_compare
 wc_str_compare:
-  subq $8, %rsp                   // Decrement stack pointer
+    subq $8, %rsp                 // Decrement stack pointer by 8 bytes for alignment
+    pushq %r12                    // Save register r12 onto the stack
+    pushq %r13                    // Save register r13 onto the stack
 
-  pushq %r12                       // Local variable for the lhs char
-  pushq %r13                       // Local variable for the rhs char
-  
+    testq %rdi, %rdi              // Test if lhs (rdi) is null
+    je .LstrcompLhsIsNull         // Jump if lhs is null
+    testq %rsi, %rsi              // Test if rhs (rsi) is null
+    je .LstrcompRhsIsNullWhenLhsNotNull  // Jump if rhs is null but lhs is not
 
-.Lstr_compare_loop:               // Loop condition to parse through string until the NULL char is found
-  movb (%rdi), %r12b              // Load a char from each string into their respective local variables
-  movb (%rsi), %r13b
+.LstrcompCompareLoop:
+    movb (%rdi), %r12b            // Load byte from lhs into r12
+    movb (%rsi), %r13b            // Load byte from rhs into r13
 
-  cmpb %r12b, %r13b               // Compare the lhs and rhs chars
-  jne .Lstr_compare_diff          // If they are not equal, jump to .is_difference
+    testb %r12b, %r12b            // Test if byte from lhs is null
+    jz .LstrcompEndOfLhs          // Jump if lhs byte is null
+    testb %r13b, %r13b            // Test if byte from rhs is null
+    jz .LstrcompEndOfRhs          // Jump if rhs byte is null
 
-  cmpb $0, %r12b                  // Test if the end of the string (NULL character) is reached
-  je .Lstr_compare_equal          // If NULL is reached, jump to .equal
+    cmpb %r12b, %r13b             // Compare bytes from lhs and rhs
+    jg .LstrcompLhsGreater        // Jump if lhs byte is greater
+    jl .LstrcompRhsGreater         // Jump if rhs byte is greater
 
-  incq %rdi                       // Increment the string pointers (rdi and rsi)
-  incq %rsi
+    inc %rdi                      // Move to the next byte in lhs
+    inc %rsi                      // Move to the next byte in rhs
+    jmp .LstrcompCompareLoop      // Loop to next character comparison
 
-  jmp .Lstr_compare_loop          // Jump back to .loop to compare the next characters
+.LstrcompEndOfLhs:
+    testb %r13b, %r13b            // Test if rhs byte is null
+    jnz .LstrcompRhsGreater       // Jump if rhs byte is not null
+    jmp .LstrcompEqual            // Else, both strings are equal
 
-.Lstr_compare_diff:
-  movzbl %r12b, %eax              // Move the zero extended values of the local chars to 32 bit registers
-  movzbl %r13b, %r13d
-  subl %r13d, %eax                // Subtract the values and store in the return value
+.LstrcompEndOfRhs:
+    testb %r12b, %r12b            // Test if lhs byte is null
+    jnz .LstrcompLhsGreater       // Jump if lhs byte is not null
+    jmp .LstrcompEqual            // Else, both strings are equal
 
-  pop %r13                        // Restore value of %r13
-  pop %r12                        // Restore value of %r12
-  addq $8, %rsp                   // Align the stack pointer
-  ret                             // Return the result
+.LstrcompLhsIsNull:
+    testq %rsi, %rsi              // Test if rhs is null
+    jnz .LstrcompRhsGreater       // Jump if rhs is not null
+    jmp .LstrcompEqual            // Else, both strings are equal
 
-.Lstr_compare_equal:
-  mov $0, %eax                    // Set the return value to 0
-  popq %r13                        // Restore value of %r13
-  popq %r12                        // Restore value of %r12
-  addq $8, %rsp                   // Align the stack pointer
-  ret                             // Return 0 if equal
+.LstrcompRhsIsNullWhenLhsNotNull:
+    jmp .LstrcompLhsGreater       // Lhs is greater since rhs is null but lhs is not
+
+.LstrcompLhsGreater:
+    movl $1, %eax                 // Set result to 1 (lhs is greater)
+    jmp .LstrcompExit             // Jump to function exit
+
+.LstrcompRhsGreater:
+    movl $-1, %eax                // Set result to -1 (rhs is greater)
+    jmp .LstrcompExit             // Jump to function exit
+
+.LstrcompEqual:
+    xorl %eax, %eax               // Set result to 0 (both strings are equal)
+
+.LstrcompExit:
+    popq %r13                     // Restore r13 from the stack
+    popq %r12                     // Restore r12 from the stack
+    addq $8, %rsp                 // Restore the stack pointer
+    ret
+
+
 
 /*
  * Copy NUL-terminated source string to the destination buffer.
@@ -131,7 +156,7 @@ wc_str_copy:
 
 .Lstr_copy_loop:
 
-  cmpb $0, %r12b                  // Check if the null terminator has been reached
+  cmpb $0, (%r12)                  // Check if the null terminator has been reached
   je .Lstr_copy_end               // Jump to the end condition
   movb (%r12), %r13b              // Move the char into the destination temp
 
@@ -144,8 +169,8 @@ wc_str_copy:
 
 .Lstr_copy_end:
   movb $0, (%rdi)                 // Add null terminator to destination string
-  popq %r12                       // Restore value of %r12
   popq %r13                       // Restore the value of %13
+  popq %r12                       // Restore value of %r12
   addq $8, %rsp                   // Align the stack pointer
   ret                             // return the destination string
 
@@ -471,7 +496,7 @@ wc_find_or_insert:
   movq %r12, %rsi                   // Move the current WordEntry to rdi
   movq %r13, %rdi                   // Move the target word to rsi 
   call wc_str_compare               // Compare the words
-  test %eax, %eax                   // Check if the words are the same
+  test %eax, %eax                   // Check if the words non zer0 ***DIF
   jz .Lfound_match                  // Return cur pos
 
   movq WORDENTRY_NEXT_OFFSET(%r12), %r12 // Move to the next WordEntry object in the linked list
@@ -481,6 +506,8 @@ wc_find_or_insert:
   movq $80, %rdi                    // Move 80 (size of WordEntry obj) to the first input var %rdi for malloc
   call malloc                       // Allocate a new WordEntry object
   movq %rax, %r12                   // Move result to the cur pos
+
+  leaq WORDENTRY_WORD_OFFSET(%r12), %rdi
 
   movq %r13, %rsi                   // Move the target string into %rsi for copying
   call wc_str_copy                  // Copy the target string into the new WordEntry object
@@ -525,57 +552,52 @@ wc_find_or_insert:
  */
 	.globl wc_dict_find_or_insert
 wc_dict_find_or_insert:
-  subq $8, %rsp
-  pushq %r12                        // Preserve callee-saved registers
-  pushq %r13
-  pushq %r14
-  pushq %r15
-  pushq %rbx
+    // Save callee-saved registers
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
 
-  movq %rdi, %r12                   // Save pointer to buckets in r12
-  movl %esi, %r13d                  // Save num_buckets in r13d
-  movq %rdx, %r14                   // Save pointer to source word in r14
+    movq %rdi, %r12                  // Save pointer to buckets in r12
+    movl %esi, %r13d                 // Save num_buckets in r13d
+    movq %rdx, %r14                  // Save pointer to source word in r14
 
-  movq %r14, %rdi                   // Set source word as argument for wc_hash
-  call wc_hash
-  movq %r14, %rdi
-  xorl %edx, %edx                   // Clear edx for division
-  divl %r13d                        // Divide, result in eax, remainder in edx
-  movl %edx, %r15d                  // Store remainder (hash index) in r15d
+    movq %r14, %rdi                  // Set source word as argument for wc_hash
+    call wc_hash
+    xorl %edx, %edx                  // Clear edx for division
+    divl %r13d                       // Divide, result in eax, remainder in edx
+    movl %edx, %r15d                 // Store remainder (hash index) in r15d
 
-  
-  lea (%r12, %r15, 8), %rdi        // Locate appropriate bucket using the hash index
-                                   // Move bucket to first argument
+    movq (%r12, %r15, 8), %rdi        // Locate appropriate bucket using the hash index
 
-  movq %r14, %rsi                   // Move bucket to second argument
+    movq %r14, %rsi                  // Reset the source word to %rsi
+    pushq %rbp
+    movq %rsp, %rbp 
+    subq $8, %rsp                    // Space for 'inserted' local variable
+    leaq -8(%rbp), %r13 
+    movq $0, (%r13)       
+    movq %r13, %rdx          
 
-  movq %rsp, %rbx
-  leaq -8(%rbx), %r13               // Address of 'inserted' local variable
-  movq $0, (%r13)                   // Initialize 'inserted' to zero
-  movq %r13, %rdx                   // Address for 'inserted' as third argument
+    call wc_find_or_insert
 
-  movq %r13, %rdx
-  call wc_find_or_insert
-
-  // Check and act on the inserted flag
-  cmpq $1, (%r13)
-  je .LupdateBucket
-  jmp .Lexit
+    // Check and act on the inserted flag
+    cmpq $1, (%r13)
+    je .LupdateBucket
+    jmp .Lexit
 
 .LupdateBucket:
-  // Update the bucket with the new WordEntry if needed
-  movq %rax, (%r12, %r15, 8)
-  jmp .Lexit
+    // Update the bucket with the new WordEntry if needed
+    movq %rax, (%r12, %r15, 8)
 
 .Lexit:
-  // Restore callee-saved registers and return
-  addq $8, %rsp
-  popq %rbx
-  popq %r15
-  popq %r14
-  popq %r13
-  popq %r12
-  ret
+    // Restore callee-saved registers and return
+    addq $8, %rsp
+    popq %rbp
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    ret
 
 /*
  * Free all of the nodes in given linked list of WordEntry objects.
