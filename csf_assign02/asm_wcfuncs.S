@@ -484,14 +484,14 @@ wc_find_or_insert:
   pushq %r13                        // Local var to store inserted
   pushq %r14                        // Local var to store head
 
-  movq %rdi, %r14                   // Store *head in r14
+  movq %rdi, %rbp                   // Current WordEntry set to head
   movq %rsi, %rbx                   // Store string var s in rbx
   movq %rdx, %r13                   // Store inserted in r13
-  movq %r14, %rbp                   // Current WordEntry set to head
+  movq %rdi, %r14                   // Store *head in r14
 
 .LfoiSearchList:
-  testq %rbp, %rbp                  // Test if current WordEntry is null
-  jz .LfoiCreateNewWord             // If null, create a new entry
+  cmpq $0, %rbp
+  je .LfoiCreateNewWord              // If not found, create a new entry
 
   movq %rbp, %rsi                   // Current WordEntry to rsi for comparison
   movq %rbx, %rdi                   // Set target string to rdi
@@ -507,20 +507,21 @@ wc_find_or_insert:
   call malloc                       // Allocate memory
   movq %rax, %rbp                   // Assign newly allocated memory to current WordEntry
 
-  movq %rbx, %rsi
   leaq WORDENTRY_WORD_OFFSET(%rbp), %rdi
+  movq %rbx, %rsi
   call wc_str_copy                  // Copy string to new WordEntry
 
-  movq %r14, WORDENTRY_NEXT_OFFSET(%rbp) // Link new object to the start of the list
   movl $0, WORDENTRY_COUNT_OFFSET(%rbp)  // Initialize count to 0
+  movq %r14, WORDENTRY_NEXT_OFFSET(%rbp) // Link new object to the start of the list
 
-  movl $1, (%r13)                   // Set inserted flag to 1
   movq %rbp, %rax                   // Prepare new WordEntry for return
+  movl $1, (%r13)                   // Set inserted flag to 1
+
   jmp .LfoiEnd
 
 .LfoiFoundWord:
-  movl $0, (%r13)                   // Set inserted flag to 0
   movq %rbp, %rax                   // Prepare the current WordEntry for return
+  movl $0, (%r13)                   // Set inserted flag to 0
 
 .LfoiEnd:
   popq %r14
