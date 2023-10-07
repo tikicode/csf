@@ -182,6 +182,43 @@ void test_readnext(TestObjs *objs) {
 
   ASSERT(0 == wc_readnext(in, buf));
 
+  // Test reading from an empty file
+  in = fopen("empty.txt", "w");  // This will create an empty file
+  fclose(in);
+  in = fopen("empty.txt", "r");
+
+  ASSERT(0 == wc_readnext(in, buf));
+  ASSERT(0 == strlen((const char *) buf));
+
+  fclose(in);
+
+  // Test reading a word that is exactly the maximum length
+  char long_word[MAX_WORDLEN + 1];
+  memset(long_word, 'a', MAX_WORDLEN);
+  long_word[MAX_WORDLEN] = '\0';
+  in = fopen("long_word.txt", "w");
+  fputs(long_word, in);
+  fclose(in);
+  in = fopen("long_word.txt", "r");
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp(long_word, (const char *) buf));
+
+  fclose(in);
+
+  // Test reading a word that exceeds the maximum length
+  char very_long_word[MAX_WORDLEN + 2];
+  memset(very_long_word, 'b', MAX_WORDLEN + 1);
+  very_long_word[MAX_WORDLEN + 1] = '\0';
+  in = fopen("very_long_word.txt", "w");
+  fputs(very_long_word, in);
+  fclose(in);
+  in = fopen("very_long_word.txt", "r");
+  
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(strlen((const char *) buf) == MAX_WORDLEN);
+  ASSERT(0 == wc_readnext(in, buf));  // ensure that the next read returns 0
+
   fclose(in);
 }
 
@@ -239,6 +276,46 @@ void test_find_or_insert(TestObjs *objs) {
   ASSERT(p != NULL);
   ASSERT(0 == strcmp("ax's", (const char *) p->word));
   ASSERT(1 == p->count);
+  ++p->count;
+
+  // Insert "hello"
+  p = wc_find_or_insert(list, (const unsigned char *) "hello", &inserted);
+  ASSERT(1 == inserted);
+  list = p;
+  ASSERT(p != NULL);
+  ASSERT(0 == strcmp("hello", (const char *) p->word));
+  ASSERT(0 == p->count);
+  ++p->count;
+
+  // Insert "world" 
+  p = wc_find_or_insert(list, (const unsigned char *) "world", &inserted);
+  ASSERT(1 == inserted);
+  ASSERT(p != NULL);
+  ASSERT(0 == strcmp("world", (const char *) p->word));
+  ASSERT(0 == p->count);
+  ++p->count;
+
+  // Ensure "hello" is still the first word in the list
+  ASSERT(0 == strcmp("hello", (const char *) list->next->word));
+  ASSERT(1 == list->next->count);
+
+  // Insert "hello" again 
+  p = wc_find_or_insert(list, (const unsigned char *) "hello", &inserted);
+  ASSERT(0 == inserted);
+  ASSERT(p != NULL);
+  ASSERT(0 == strcmp("hello", (const char *) p->word));
+  ASSERT(2 == p->count);  // count should now be 2
+
+  // Free list and insert into an empty list again
+  wc_free_chain(list);
+  list = NULL;
+  
+  p = wc_find_or_insert(list, (const unsigned char *) "fresh", &inserted);
+  ASSERT(1 == inserted);
+  list = p;
+  ASSERT(p != NULL);
+  ASSERT(0 == strcmp("fresh", (const char *) p->word));
+  ASSERT(0 == p->count);
   ++p->count;
 
   wc_free_chain(list);
