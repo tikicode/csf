@@ -77,8 +77,10 @@ wc_hash:
 	.globl wc_str_compare
 wc_str_compare:
   subq $8, %rsp                   // Decrement stack pointer
-  push %r12                       // Local variable for the lhs char
-  push %r13                       // Local variable for the rhs char
+
+  pushq %r12                       // Local variable for the lhs char
+  pushq %r13                       // Local variable for the rhs char
+  
 
 .Lstr_compare_loop:               // Loop condition to parse through string until the NULL char is found
   movb (%rdi), %r12b              // Load a char from each string into their respective local variables
@@ -107,8 +109,8 @@ wc_str_compare:
 
 .Lstr_compare_equal:
   mov $0, %eax                    // Set the return value to 0
-  pop %r13                        // Restore value of %r13
-  pop %r12                        // Restore value of %r12
+  popq %r13                        // Restore value of %r13
+  popq %r12                        // Restore value of %r12
   addq $8, %rsp                   // Align the stack pointer
   ret                             // Return 0 if equal
 
@@ -120,23 +122,30 @@ wc_str_compare:
  */
 	.globl wc_str_copy
 wc_str_copy:
-  subq $8, %rsp                   // Decrement stack pointer
-  push %r12                       // Local variable for the copied char
+  subq $8, %rsp                    // Decrement stack pointer
+
+  pushq %r12                       // Local variable for the destination
+  pushq %r13                       // Local variable for the temp string
+
+  movq %rsi, %r12                  // Move source to local variable
 
 .Lstr_copy_loop:
-  movb (%rsi), %r12b              // Load a byte (char) from string source index into the temp register
+
   cmpb $0, %r12b                  // Check if the null terminator has been reached
   je .Lstr_copy_end               // Jump to the end condition
-  movb %r12b, (%rdi)              // Move the char into the destination index
+  movb (%r12), %r13b              // Move the char into the destination temp
+
+  movb %r13b, (%rdi)              // Mve temp character to destination
 
   incq %rdi                       // Increment the destination register to get the next writable index
-  incq %rsi                       // Increment the source register to get the next char index
+  incq %r12                       // Increment source
 
   jmp .Lstr_copy_loop             // Jump back to the str_copy_loop to copy the next char
 
 .Lstr_copy_end:
   movb $0, (%rdi)                 // Add null terminator to destination string
-  pop %r12                        // Restore value of %r12
+  popq %r12                       // Restore value of %r12
+  popq %r13                       // Restore the value of %13
   addq $8, %rsp                   // Align the stack pointer
   ret                             // return the destination string
 
@@ -274,23 +283,7 @@ je .Lreadnext_space                 // If the char is a space, continue
 movb %r15b, (%r13)                  // Move the char to the destination string
 incq %r13                           // Move to the next position of the destination string
 incl %r14d                          // Increment the counter
-
-.Lreadnext_space:
-  movq %r12, %rdi                   // Restore %rdi to FILE *in for the call to fgetc
-  call fgetc                        // Get next char from file
-
-  movb %al, %r15b                   // Move char return from fgetc to local char var
-  cmp $-1, %eax                     // Check if c == EOF
-  je .Lreadnext_end                 // If EOF, end read
-
-  movb %r15b, %dil                  // Move char from fgetc to first argument for input into isspace
-  call wc_isspace                   // Call isspace
-  cmpl $1, %eax                     // Check if the char is a space
-  je .Lreadnext_space               // If the char is a space, continue 
-
-  movb %r15b, (%r13)                // Move the char to the destination string
-  incq %r13                         // Move to the next position of the destination string
-  incl %r14d                        // Increment the counter
+                                    // Increment the counter
   
 .Lreadnext_loop:
   cmpl $MAX_WORDLEN, %r14d          // Check count against max size of dest string (64)
@@ -399,37 +392,47 @@ wc_tolower:
  */
 	.globl wc_trim_non_alpha
 wc_trim_non_alpha:
+  wc_trim_non_alpha:
   subq $8, %rsp                     // Decrement stack pointer
-  push %r12                         // Local var for char
-  push %r13                         // Local var to track beginning of string
-  movq %rsi, %r13                   // Initialize local var to address of the beginning of the string
 
-.Ltrim_non_alpha_loop:
-  movb (%rsi), %r12b                // Load a byte (char) into the al register
-  testb %r12b, %r12b                // Check if the char is the null terminator
-  jz .Ltrim_non_alpha               // If the end of the string is reached, begin trimming
+  pushq %r12                        // Save value of local variable
 
-  incq %rsi                         // Otherwise, go to the next char
-  jmp .Ltrim_non_alpha_loop         // Continue the loop
+.Ltrimloop:
 
-.Ltrim_non_alpha:
-  decq %rsi                         // Move to the previous char
-  test %rsi, %r13                   // Check if the start of the string was reached
-  jz .Ltrim_non_alpha_end           // If it was reached, end the loop
+  movb (%rdi), %r12b                // Load the next byte of rdi to local
+  testb %r12b, %r12b                // Make sure the char is not the NULL terminator
+  jz .Ltrim                         // If NULL terminator we have reached end - move to trim
+  incq %rdi                         // Increment to next char
+  jmp .Ltrimloop                    // Jump to beginning of loop
+.Ltrim:
+  decq %rdi                         // Decrement rdi because moving backwards nw
+  movb (%rdi), %r12b                // Load the next byte of rdi to local
+  testb %r12b, %r12b                // Make sure the char is not the NULL terminator
+  jz .Ltrim_non_alpha_end           // If NULL terminator we have reached end
 
-  movb (%rsi), %dil                 // Move the char into %dil for the call to isalpha
-  call wc_isalpha                   // Call the isalpha function
-  test %eax, %eax                   // Check if the character is alphanumeric from the function result
-  jnz .Ltrim_non_alpha_end          // If alphanumeric, stop trimming and return
+  jmp .Ltrim_isalpha                // Jump to the trim_isalpha to decide how to do rest
 
-  movb $0, (%rsi)                   // Replace char with a null terminator
-  jmp .Ltrim_non_alpha              // Check if the next character is not alphanumeric
+.Ltrim_isalpha:
+  cmp $65, %r12b                    // Comparing byte with A
+  jl .Ltrim                         // If less it is not alpha, so trim
+
+  cmp $90, %r12b                    // Comparing byte with Z      
+  jle .Ltrim_non_alpha_end          // If less that or equal to, it is alpha, so end
+
+
+  cmp $97, %r12b                    // Comparing byte wih a
+  jl .Ltrim                         // If less it is not alpha, so trim
+
+
+  cmp $122, %r12b                   // Comparing byte with z
+  jg .Ltrim                         // If greater that, it is not alpha so trim
 
 .Ltrim_non_alpha_end:
   addq $8, %rsp                     // Align stack pointer
-  pop %r13                          // Restore value of %r13
-  pop %r12                          // Restore value of %r12
-  ret                               // Void return
+  incq %rdi                         // Increment rdi to make room for NULL pointer
+  movb $0, (%rdi)                   // Add NULL pointer to end
+  popq %r12                         // Restore local var
+  ret
 
 /*
  * Search the specified linked list of WordEntry objects for an object
@@ -542,7 +545,7 @@ wc_dict_find_or_insert:
 
   
   lea (%r12, %r15, 8), %rdi        // Locate appropriate bucket using the hash index
-                                    // Move bucket to first argument
+                                   // Move bucket to first argument
 
   movq %r14, %rsi                   // Move bucket to second argument
 
