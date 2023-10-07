@@ -182,6 +182,105 @@ void test_readnext(TestObjs *objs) {
 
   ASSERT(0 == wc_readnext(in, buf));
 
+  // Test reading from an empty file
+  in = fopen("empty.txt", "w");  // This will create an empty file
+  fclose(in);
+  in = fopen("empty.txt", "r");
+
+  ASSERT(0 == wc_readnext(in, buf));
+  ASSERT(0 == strlen((const char *) buf));
+
+  fclose(in);
+
+  // Test reading a word that is exactly the maximum length
+  char long_word[MAX_WORDLEN + 1];
+  memset(long_word, 'a', MAX_WORDLEN);
+  long_word[MAX_WORDLEN] = '\0';
+  in = fopen("long_word.txt", "w");
+  fputs(long_word, in);
+  fclose(in);
+  in = fopen("long_word.txt", "r");
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp(long_word, (const char *) buf));
+
+  fclose(in);
+
+  // Test reading a word that exceeds the maximum length
+  char very_long_word[MAX_WORDLEN + 2];
+  memset(very_long_word, 'b', MAX_WORDLEN + 1);
+  very_long_word[MAX_WORDLEN + 1] = '\0';
+  in = fopen("very_long_word.txt", "w");
+  fputs(very_long_word, in);
+  fclose(in);
+  in = fopen("very_long_word.txt", "r");
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(strlen((const char *) buf) == MAX_WORDLEN);
+
+  fclose(in);
+
+  // Test reading with multiple consecutive whitespaces
+  in = fopen("multiple_spaces.txt", "w");
+  fputs("first    second   third", in);  // 4 spaces, then 3 spaces
+  fclose(in);
+  in = fopen("multiple_spaces.txt", "r");
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("first", (const char *) buf));
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("second", (const char *) buf));
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("third", (const char *) buf));
+
+  ASSERT(0 == wc_readnext(in, buf));  // ensure that the next read returns 0
+  fclose(in);
+
+  // Test reading with leading whitespaces
+  in = fopen("leading_spaces.txt", "w");
+  fputs("   leading", in);  // 3 leading spaces
+  fclose(in);
+  in = fopen("leading_spaces.txt", "r");
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("leading", (const char *) buf));
+
+  ASSERT(0 == wc_readnext(in, buf));  // ensure that the next read returns 0
+  fclose(in);
+
+  // Test reading with trailing whitespaces
+  in = fopen("trailing_spaces.txt", "w");
+  fputs("trailing   ", in);  // 3 trailing spaces
+  fclose(in);
+  in = fopen("trailing_spaces.txt", "r");
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("trailing", (const char *) buf));
+
+  ASSERT(0 == wc_readnext(in, buf));  // ensure that the next read returns 0
+  fclose(in);
+
+  // Test reading with other whitespace characters (tabs, newlines)
+  in = fopen("other_whitespace.txt", "w");
+  fputs("tab\t\tbetween\nnewlines\n\nbelow", in);  // Tab characters and newlines
+  fclose(in);
+  in = fopen("other_whitespace.txt", "r");
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("tab", (const char *) buf));
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("between", (const char *) buf));
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("newlines", (const char *) buf));
+
+  ASSERT(1 == wc_readnext(in, buf));
+  ASSERT(0 == strcmp("below", (const char *) buf));
+
+  ASSERT(0 == wc_readnext(in, buf));  // ensure that the next read returns 0
   fclose(in);
 }
 
@@ -239,6 +338,43 @@ void test_find_or_insert(TestObjs *objs) {
   ASSERT(p != NULL);
   ASSERT(0 == strcmp("ax's", (const char *) p->word));
   ASSERT(1 == p->count);
+  ++p->count;
+
+  // Insert "hello"
+  p = wc_find_or_insert(list, (const unsigned char *) "hello", &inserted);
+  list = p;
+  ASSERT(1 == inserted);
+  ASSERT(p != NULL);
+  ASSERT(0 == strcmp("hello", (const char *) p->word));
+  ASSERT(0 == p->count);
+  ++p->count;
+
+  // Insert "world" 
+  p = wc_find_or_insert(list, (const unsigned char *) "world", &inserted);
+  list = p;
+  ASSERT(1 == inserted);
+  ASSERT(p != NULL);
+  ASSERT(0 == strcmp("world", (const char *) p->word));
+  ASSERT(0 == p->count);
+  ++p->count;
+
+  // Insert "hello" again 
+  p = wc_find_or_insert(list, (const unsigned char *) "hello", &inserted);
+  ASSERT(0 == inserted);
+  ASSERT(p != NULL);
+  ASSERT(0 == strcmp("hello", (const char *) p->word));
+  ASSERT(1 == p->count);  
+
+  // Free list and insert into an empty list again
+  wc_free_chain(list);
+  list = NULL;
+  
+  p = wc_find_or_insert(list, (const unsigned char *) "fresh", &inserted);
+  ASSERT(1 == inserted);
+  list = p;
+  ASSERT(p != NULL);
+  ASSERT(0 == strcmp("fresh", (const char *) p->word));
+  ASSERT(0 == p->count);
   ++p->count;
 
   wc_free_chain(list);
