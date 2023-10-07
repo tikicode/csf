@@ -238,6 +238,10 @@ wc_isalpha:                         // Input is dil (8 bit of rdi register)
  * C function prototype:
  *    int wc_readnext(FILE *in, unsigned char *w);
  */
+
+
+
+ //PROBLEM IS WITH MULTIPLE SPACES
 	.globl wc_readnext
 wc_readnext:
     subq $8, %rsp                 // Decrement stack pointer
