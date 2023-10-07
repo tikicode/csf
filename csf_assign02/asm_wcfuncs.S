@@ -348,37 +348,42 @@ wc_tolower:
  */
 	.globl wc_trim_non_alpha
 wc_trim_non_alpha:
-  subq $8, %rsp                     // Decrement stack pointer
-  push %r12                         // Local var for char
-  push %r13                         // Local var to track beginning of string
-  movq %rsi, %r13                   // Initialize local var to address of the beginning of the string
+  subq $8, %rsp                     // Align the stack pointer
+.Lloop:
+  movb (%rdi), %al                  // get first char
+  testb %al, %al
+  jz .Ltrim
+  incq %rdi
+  jmp .Lloop
+.Ltrim:
+  decq %rdi
+  movb (%rdi), %al
+  testb %al, %al
+  jz .Ltrim_non_alpha_end
+  jmp .Ltrim_isalpha
+  jnz .Ltrim_non_alpha_end
+  jmp .Ltrim
+.Ltrim_isalpha:
+  cmp $65, %al      
+  jl .Ltrim                      
 
-.Ltrim_non_alpha_loop:
-  movb (%rsi), %r12b                // Load a byte (char) into the al register
-  testb %r12b, %r12b                // Check if the char is the null terminator
-  jz .Ltrim_non_alpha               // If the end of the string is reached, begin trimming
+  cmp $90, %al      
+  jle .Ltrim_non_alpha_end      
 
-  incq %rsi                         // Otherwise, go to the next char
-  jmp .Ltrim_non_alpha_loop         // Continue the loop
 
-.Ltrim_non_alpha:
-  decq %rsi                         // Move to the previous char
-  test %rsi, %r13                   // Check if the start of the string was reached
-  jz .Ltrim_non_alpha_end           // If it was reached, end the loop
+  cmp $97, %al     
+  jl .Ltrim          
 
-  movb (%rsi), %dil                 // Move the char into %dil for the call to isalpha
-  call wc_isalpha                   // Call the isalpha function
-  test %eax, %eax                   // Check if the character is alphanumeric from the function result
-  jnz .Ltrim_non_alpha_end          // If alphanumeric, stop trimming and return
 
-  movb $0, (%rsi)                   // Replace char with a null terminator
-  jmp .Ltrim_non_alpha              // Check if the next character is not alphanumeric
+  cmp $122, %al     
+  jg .Ltrim            
 
 .Ltrim_non_alpha_end:
-  addq $8, %rsp                     // Align stack pointer
-  pop %r13                          // Restore value of %r13
-  pop %r12                          // Restore value of %r12
-  ret                               // Void return
+  incq %rdi
+  movb $0, (%rdi)
+  addq $8, %rsp
+  ret
+
 
 
 /*
@@ -472,33 +477,56 @@ wc_find_or_insert:
  */
 	.globl wc_dict_find_or_insert
 wc_dict_find_or_insert:
-    subq $8, %rsp                   // Decrement stack pointer
-    movq %rdi, %rcx
+wc_dict_find_or_insert:
+    // Preserve callee-saved registers
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+    pushq %rbp
 
-.dsearch_loop:
-    cmpq $0, %rdi                   // Check if cur == NULL
-    je .dnot_found
+    // Store input arguments for clarity and future use
+    movq %rdi, %r12  // Save pointer to buckets in r12
+    movl %esi, %r13d // Save num_buckets in r13d
+    movq %rdx, %r14  // Save pointer to source word in r14
 
-    call wc_str_compare
-    test %eax, %eax
-    jz .dfound_match
+    // Calculate hash index of the source word
+    movq %r14, %rdi  // Set source word as argument for wc_hash
+    call wc_hash
+    xorl %edx, %edx  // Clear edx for division
+    divl %r13d       // Divide, result in eax, remainder in edx
+    movl %edx, %r15d // Store remainder (hash index) in r15d
 
-    movq WORDENTRY_NEXT_OFFSET(%rdi), %rdi
-    jmp .dsearch_loop
+    // Locate appropriate bucket using the hash index
+    movq (%r12, %r15, 8), %rdi  // Retrieve bucket's head pointer
 
-.dnot_found:
-    movq $72, %rdi
-    call malloc              // Allocate memory for WordEntry
-    call wc_str_copy
-    movq $0, WORDENTRY_COUNT_OFFSET(%rdi)
-    movq %rcx, WORDENTRY_NEXT_OFFSET(%rdi)
-    movq $1, %rdx
-    addq $8, %rsp                   // Align the stack pointer   
-    ret
+    // Set up arguments for wc_find_or_insert
+    movq %r14, %rsi  // Source string
+    leaq -8(%rbp), %r13  // Address of 'inserted' local variable
+    movq $0, (%r13)  // Initialize 'inserted' to zero
+    movq %r13, %rdx  // Address for 'inserted' as third argument
 
-.dfound_match:
-    movq $0, %rdx  
-    addq $8, %rsp                   // Align the stack pointer    
+    call wc_find_or_insert
+
+    // Check and act on the inserted flag
+    cmpq $1, (%r13)
+    je .LupdateBucket
+
+.LskipUpdate:
+    addq $8, %rsp   // Realign stack after 'inserted'
+    jmp .Lexit
+
+.LupdateBucket:
+    // Update the bucket with the new WordEntry if needed
+    movq %rax, (%r12, %r15, 8)
+
+.Lexit:
+    // Restore callee-saved registers and return
+    popq %rbp
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
     ret
 
 /*
