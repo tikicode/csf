@@ -349,6 +349,7 @@ void test_find_or_insert(TestObjs *objs) {
   ASSERT(0 == p->count);
   ++p->count;
 
+<<<<<<< HEAD
   // Insert "world" 
   p = wc_find_or_insert(list, (const unsigned char *) "world", &inserted);
   list = p;
@@ -377,6 +378,8 @@ void test_find_or_insert(TestObjs *objs) {
   ASSERT(0 == p->count);
   ++p->count;
 
+=======
+>>>>>>> refs/remotes/origin/main
   wc_free_chain(list);
 
 }
