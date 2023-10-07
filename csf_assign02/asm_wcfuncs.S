@@ -261,7 +261,7 @@ wc_readnext:
 
     movq %r12, %rdi               // Restore %rdi to FILE *in for the call to fgetc
     call fgetc                    // Get next char from file
-
+    
     movb %al, %r15b               // Move char return from fgetc to local char var
     cmp $-1, %eax                 // Check if c == EOF
     je .Lreadnext_end             // If EOF, end read
