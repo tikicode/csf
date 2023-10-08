@@ -545,51 +545,65 @@ wc_find_or_insert:
  */
 	.globl wc_dict_find_or_insert
 wc_dict_find_or_insert:
-    pushq %r12                       // Save callee-saved registers
-    pushq %r13
-    pushq %r14
-    pushq %r15
+/*
+ * Find or insert the WordEntry object for the given string (s), returning
+ * a pointer to it. The head of the linked list which contains (or should
+ * contain) the entry for s is the element of buckets whose index is the
+ * hash code of s mod num_buckets.
+ *
+ * Returns a pointer to the WordEntry object in the appropriate linked list
+ * which represents s.
+ *
+ * C function prototype:
+ *    struct WordEntry *wc_dict_find_or_insert(struct WordEntry *buckets[], unsigned num_buckets, const unsigned char *s)//
+ */
+	.globl wc_dict_find_or_insert
+wc_dict_find_or_insert:
+  pushq %r12                       // Save callee-saved registers
+  pushq %r13
+  pushq %r14
+  pushq %r15
 
-    movq %rdi, %r12                  // Save pointer to buckets in r12
-    movl %esi, %r13d                 // Save num_buckets in r13d
-    movq %rdx, %r14                  // Save pointer to source word in r14
+  movq %rdi, %r12                  // Save pointer to buckets in r12
+  movl %esi, %r13d                 // Save num_buckets in r13d
+  movq %rdx, %r14                  // Save pointer to source word in r14
 
-    movq %r14, %rdi                  // Set source word as argument for wc_hash
-    call wc_hash
-    xorl %edx, %edx                  // Clear edx for division
-    divl %r13d                       // Divide, result in eax, remainder in edx
-    movl %edx, %r15d                 // Store remainder (hash index) in r15d
+  movq %r14, %rdi                  // Set source word as argument for wc_hash
+  call wc_hash
+  xorl %edx, %edx                  // Clear edx for division
+  divl %r13d                       // Divide, result in eax, remainder in edx
+  movl %edx, %r15d                 // Store remainder (hash index) in r15d
 
-    movq (%r12, %r15, 8), %rdi        // Locate appropriate bucket using the hash index
+  movq (%r12, %r15, 8), %rdi        // Locate appropriate bucket using the hash index
 
-    movq %r14, %rsi                  // Reset the source word to %rsi
-    pushq %rbp
-    movq %rsp, %rbp 
-    subq $8, %rsp                    // Space for 'inserted' local variable
-    leaq -8(%rbp), %r13 
-    movq $0, (%r13)       
-    movq %r13, %rdx          
+  movq %r14, %rsi                  // Reset the source word to %rsi
+  pushq %rbp
+  movq %rsp, %rbp 
+  subq $8, %rsp                    // Space for 'inserted' local variable
+  leaq -8(%rbp), %r13 
+  movq $0, (%r13)       
+  movq %r13, %rdx          
 
-    call wc_find_or_insert
+  call wc_find_or_insert
 
-    // Check and act on the inserted flag
-    cmpq $1, (%r13)
-    je .LupdateBucket
-    jmp .Lexit
+  // Check and act on the inserted flag
+  cmpq $1, (%r13)
+  je .LupdateBucket
+  jmp .Lexit
 
 .LupdateBucket:
-    // Update the bucket with the new WordEntry if needed
-    movq %rax, (%r12, %r15, 8)
+  // Update the bucket with the new WordEntry if needed
+  movq %rax, (%r12, %r15, 8)
 
 .Lexit:
-    // Restore callee-saved registers and return
-    addq $8, %rsp
-    popq %rbp
-    popq %r15
-    popq %r14
-    popq %r13
-    popq %r12
-    ret
+  // Restore callee-saved registers and return
+  addq $8, %rsp
+  popq %rbp
+  popq %r15
+  popq %r14
+  popq %r13
+  popq %r12
+  ret
 
 /*
  * Free all of the nodes in given linked list of WordEntry objects.
