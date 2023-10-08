@@ -76,67 +76,69 @@ wc_hash:
  */
   .globl wc_str_compare
 wc_str_compare:
-    pushq %r12                    // Save register r12 onto the stack
-    pushq %r13                    // Save register r13 onto the stack
+  subq $8, %rsp                   // Decrement stack pointer
+  pushq %r12                      // Save register r12 onto the stack
+  pushq %r13                      // Save register r13 onto the stack
 
-    cmpq %rdi, %rsi               // Compare lhs and rhs pointers
-    je .LstrcompEqual
+  cmpq %rdi, %rsi                 // Compare lhs and rhs pointers
+  je .LstrcompEqual
 
-    testq %rdi, %rdi              // Test if lhs pointer is null
-    je .LstrcompLhsIsNull
+  testq %rdi, %rdi                // Test if lhs pointer is null
+  je .LstrcompLhsIsNull
 
-    testq %rsi, %rsi              // Test if rhs pointer is null
-    je .LstrcompRhsIsNullWhenLhsNotNull
+  testq %rsi, %rsi                // Test if rhs pointer is null
+  je .LstrcompRhsIsNullWhenLhsNotNull
 
 .LstrcompCompareLoop:
-    movb (%rdi), %r12b            // Load byte from lhs into r12
-    movb (%rsi), %r13b            // Load byte from rhs into r13
+  movb (%rdi), %r12b              // Load byte from lhs into r12
+  movb (%rsi), %r13b              // Load byte from rhs into r13
 
-    testb %r12b, %r12b            // Test if byte from lhs is null
-    jz .LstrcompEndOfLhs
+  testb %r12b, %r12b              // Test if byte from lhs is null
+  jz .LstrcompEndOfLhs
 
-    testb %r13b, %r13b            // Test if byte from rhs is null
-    jz .LstrcompEndOfRhs
+  testb %r13b, %r13b              // Test if byte from rhs is null
+  jz .LstrcompEndOfRhs
 
-    cmpb %r12b, %r13b             // Compare bytes from lhs and rhs
-    jg .LstrcompLhsGreater        // Jump if lhs byte is greater
-    jl .LstrcompRhsGreater         // Jump if rhs byte is greater
+  cmpb %r12b, %r13b               // Compare bytes from lhs and rhs
+  jg .LstrcompLhsGreater          // Jump if lhs byte is greater
+  jl .LstrcompRhsGreater          // Jump if rhs byte is greater
 
-    inc %rdi                      // Move to the next byte in lhs
-    inc %rsi                      // Move to the next byte in rhs
-    jmp .LstrcompCompareLoop      // Loop to next character comparison
+  inc %rdi                        // Move to the next byte in lhs
+  inc %rsi                        // Move to the next byte in rhs
+  jmp .LstrcompCompareLoop        // Loop to next character comparison
 
 .LstrcompEndOfLhs:
-    testb %r13b, %r13b            // Test if byte from rhs is null
-    jnz .LstrcompRhsGreater       // Jump if rhs byte is not null
-    jmp .LstrcompEqual            // Else, both strings are equal
+  testb %r13b, %r13b              // Test if byte from rhs is null
+  jnz .LstrcompRhsGreater         // Jump if rhs byte is not null
+  jmp .LstrcompEqual              // Else, both strings are equal
 
 .LstrcompEndOfRhs:
-    testb %r12b, %r12b            // Test if byte from lhs is null
-    jnz .LstrcompLhsGreater       // Jump if lhs byte is not null
-    jmp .LstrcompEqual            // Else, both strings are equal
+  testb %r12b, %r12b              // Test if byte from lhs is null
+  jnz .LstrcompLhsGreater         // Jump if lhs byte is not null
+  jmp .LstrcompEqual              // Else, both strings are equal
 
 .LstrcompLhsIsNull:
-    jmp .LstrcompRhsGreater       // Jump to function exit
+  jmp .LstrcompRhsGreater         // Jump to function exit
 
 .LstrcompRhsIsNullWhenLhsNotNull:
-    jmp .LstrcompLhsGreater       // Jump to function exit
+  jmp .LstrcompLhsGreater         // Jump to function exit
 
 .LstrcompLhsGreater:
-    movl $1, %eax                 // Set result to 1 (lhs is greater)
-    jmp .LstrcompExit             // Jump to function exit
+  movl $1, %eax                   // Set result to 1 (lhs is greater)
+  jmp .LstrcompExit               // Jump to function exit
 
 .LstrcompRhsGreater:
-    movl $-1, %eax                // Set result to -1 (rhs is greater)
-    jmp .LstrcompExit             // Jump to function exit
+  movl $-1, %eax                  // Set result to -1 (rhs is greater)
+  jmp .LstrcompExit               // Jump to function exit
 
 .LstrcompEqual:
-    xorl %eax, %eax               // Set result to 0 (both strings are equal)
+  xorl %eax, %eax                 // Set result to 0 (both strings are equal)
 
 .LstrcompExit:
-    popq %r13                     // Restore r13 from the stack
-    popq %r12                     // Restore r12 from the stack
-    ret
+  popq %r13                       // Restore r13 from the stack
+  popq %r12                       // Restore r12 from the stack
+  addq $8, %rsp                   // Align stack pointer
+  ret
 
 
 
@@ -293,22 +295,21 @@ wc_readnext:
   movq $0, %r15                     // Ensure char var is empty
 
 .Lreadnext_space:
-movq %r12, %rdi                     // Restore %rdi to FILE *in for the call to fgetc
-call fgetc                          // Get next char from file
+  movq %r12, %rdi                   // Restore %rdi to FILE *in for the call to fgetc
+  call fgetc                        // Get next char from file
 
-movb %al, %r15b                     // Move char return from fgetc to local char var
-cmp $-1, %eax                       // Check if c == EOF
-je .Lreadnext_end                   // If EOF, end read
+  movb %al, %r15b                   // Move char return from fgetc to local char var
+  cmp $-1, %eax                     // Check if c == EOF
+  je .Lreadnext_end                 // If EOF, end read
 
-movb %r15b, %dil                    // Move char from fgetc to first argument for input into isspace
-call wc_isspace                     // Call isspace
-cmpl $1, %eax                       // Check if the char is a space
-je .Lreadnext_space                 // If the char is a space, continue 
+  movb %r15b, %dil                  // Move char from fgetc to first argument for input into isspace
+  call wc_isspace                   // Call isspace
+  cmpl $1, %eax                     // Check if the char is a space
+  je .Lreadnext_space               // If the char is a space, continue 
 
-movb %r15b, (%r13)                  // Move the char to the destination string
-incq %r13                           // Move to the next position of the destination string
-incl %r14d                          // Increment the counter
-                                    // Increment the counter
+  movb %r15b, (%r13)                // Move the char to the destination string
+  incq %r13                         // Move to the next position of the destination string
+  incl %r14d                        // Increment the counter
   
 .Lreadnext_loop:
   cmpl $MAX_WORDLEN, %r14d          // Check count against max size of dest string (64)
@@ -545,20 +546,6 @@ wc_find_or_insert:
  */
 	.globl wc_dict_find_or_insert
 wc_dict_find_or_insert:
-/*
- * Find or insert the WordEntry object for the given string (s), returning
- * a pointer to it. The head of the linked list which contains (or should
- * contain) the entry for s is the element of buckets whose index is the
- * hash code of s mod num_buckets.
- *
- * Returns a pointer to the WordEntry object in the appropriate linked list
- * which represents s.
- *
- * C function prototype:
- *    struct WordEntry *wc_dict_find_or_insert(struct WordEntry *buckets[], unsigned num_buckets, const unsigned char *s)//
- */
-	.globl wc_dict_find_or_insert
-wc_dict_find_or_insert:
   pushq %r12                       // Save callee-saved registers
   pushq %r13
   pushq %r14
@@ -574,31 +561,28 @@ wc_dict_find_or_insert:
   divl %r13d                       // Divide, result in eax, remainder in edx
   movl %edx, %r15d                 // Store remainder (hash index) in r15d
 
-  movq (%r12, %r15, 8), %rdi        // Locate appropriate bucket using the hash index
+  movq (%r12, %r15, 8), %rdi       // Locate appropriate bucket using the hash index
 
   movq %r14, %rsi                  // Reset the source word to %rsi
   pushq %rbp
   movq %rsp, %rbp 
   subq $8, %rsp                    // Space for 'inserted' local variable
-  leaq -8(%rbp), %r13 
-  movq $0, (%r13)       
+  leaq -8(%rbp), %r13              // Allocate space for inserted
+  movq $0, (%r13)                  // Set inserted to zero
   movq %r13, %rdx          
 
-  call wc_find_or_insert
+  call wc_find_or_insert           // Call find or insert
 
-  // Check and act on the inserted flag
-  cmpq $1, (%r13)
+  cmpq $1, (%r13)                  // Check if inserted already
   je .LupdateBucket
   jmp .Lexit
 
 .LupdateBucket:
-  // Update the bucket with the new WordEntry if needed
-  movq %rax, (%r12, %r15, 8)
+  movq %rax, (%r12, %r15, 8)       // Update the bucket with the new WordEntry if needed
 
 .Lexit:
-  // Restore callee-saved registers and return
-  addq $8, %rsp
-  popq %rbp
+  addq $8, %rsp                    // Restore stack ptr
+  popq %rbp                        // Restore callee-saved registers and return
   popq %r15
   popq %r14
   popq %r13
