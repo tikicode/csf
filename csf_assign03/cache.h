@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <iostream>
 
-struct Stored { bool is_dirty; int created, accessed; };
+struct Slots { bool is_dirty; int load_ts, access_ts; };
 
 class Cache{
   private:
@@ -13,8 +13,9 @@ class Cache{
     bool is_write_through, is_write_allocate, is_lru;
     int load_hits = 0, load_misses = 0, store_hits = 0;
     int store_misses = 0, cycles = 0;
-    
-    // make var for sets 
+
+    std::unordered_map<uint32_t, Slots> set;
+
 
   public:
     Cache(
@@ -32,6 +33,9 @@ class Cache{
       this->is_write_through = is_write_through;
       this->is_lru = is_lru;
     };
+
+    
+
 
 };
 
