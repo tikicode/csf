@@ -1,6 +1,7 @@
 #ifndef CACHE_H
 #define CACHE_H
 
+#include <cstdint>
 #include <iostream>
 #include <unordered_map>
 #include <iostream>
@@ -34,9 +35,11 @@ class Cache{
       this->is_lru = is_lru;
     };
 
+    void read(uint32_t address, int currentTime);
+
+    void write(uint32_t address, int currentTime);
+
     
-
-
 };
 
 #endif
