@@ -27,16 +27,16 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  bool is_write_allocate = !(strcmp(argv[4], "write-allocate"));
-  bool is_write_through = !(strcmp(argv[5], "write-through"));
+  bool is_write_allocate = strcmp(argv[4], "write-allocate");
+  bool is_write_back = !(strcmp(argv[5], "write-through"));
   bool is_lru = !(strcmp(argv[6], "lru"));
 
-  if (!is_write_allocate && !is_write_through) {
+  if (!is_write_allocate && is_write_back) {
     std::cerr << "Cannot use no-write-allocate and write-back together" << std::endl;
     return 1;
   }
 
-  Cache cache(sets_in_cache, blocks_per_set, block_size, is_write_allocate, is_write_through, is_lru);
+  Cache cache(sets_in_cache, blocks_per_set, block_size, is_write_allocate, is_write_back, is_lru);
 
   int time = 0;
   int offset = log2(block_size);

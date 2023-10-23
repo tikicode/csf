@@ -4,62 +4,41 @@
 #include <string>
 
 // Method to handle write operations
-void Cache::write(row &set, uint32_t tag, int currentTime) {
-    auto it = set.find(tag);
-
-    //checking if address is in cache
-    if (it != set.end()) {
-        //since we're writing to an aready stored position
-        store_hits++;
-
-        it->second.access_ts = currentTime;
-
-        if (is_write_through) {
-            it->second.is_dirty = false;
-        } else {
-            it->second.is_dirty = true;
-        } 
-    } else {
-        store_misses++;
-
-        if (is_write_allocate) {
-            if (set.size() >= blocks_per_set) {
-                auto lru = set.begin();
-                for (auto itr = set.begin(); itr != set.end(); ++itr) {
-                    if (itr->second.access_ts < lru->second.access_ts) {
-                        lru = itr;
-                    }
-                }
-                set.erase(lru);
-            }
-
-            
-        }
+void Cache::write(uint32_t index, uint32_t tag, int current_time) {
+  auto block = sets[index].find(tag);
+  if (block != sets[index].end()) {
+    store_hits++;
+    cycles += is_write_back ? 1 : 100;
+    block->second.access_ts = current_time;
+    block->second.is_dirty = is_write_back;
+  }
+  else {
+    cycles += (is_write_allocate ? 100 : 0) + (is_write_back ? 0 : 25 * block_size);
+    store_misses++;
+    if (is_write_allocate) {
+      // add new block to cache 
+      return;
     }
-    
-
-
+  }
     
 }
 
 // Method to handle read operations
-void Cache::read(uint32_t address, uint32_t tag, int currentTime) {
-    if (this->set.find(address) != this->set.end()) {
-        // Update the access time
-        this->set[address].access_ts = currentTime;
-        load_hits++;
-    } else {
-        // If it's a miss and the policy is to load into cache on a read miss
-        if (this->is_write_allocate) { // Assuming the same policy for read operations
-            // Handle the case where the cache set might be full 
-            // STILL TODO
-
-            // Add the new address to the cache
-            this->set[address] = Slots{false, currentTime, currentTime}; // is_dirty is false because we're reading
-        }
-        load_misses++;
-    }
+void Cache::read(uint32_t index, uint32_t tag, int current_time) {
+  auto block = sets[index].find(tag);
+  if (block != sets[index].end()) {
+    load_hits++;
     cycles++;
+    block->second.access_ts = current_time;
+  }
+  else {
+    cycles += 25 * block_size + 1;
+    load_misses++;
+    if (is_write_allocate) {
+    // add new block to cache 
+      return;
+    }
+  }
 }
 
 void Cache::print_stats() {
