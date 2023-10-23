@@ -41,12 +41,12 @@ int main(int argc, char** argv) {
   int index = log2(sets_in_cache);
   char action;
   uint32_t address;
-  std::string op;
-  while (std::getline(std::cin, op)) {
-    printf("%c", action);
-    printf("%i\n", address);
-    time++;
-  }
+  std::string trace; 
+  while (std::getline(std::cin, trace)) {
+    char action = trace.at(0);
+    uint32_t addr = (uint32_t)std::stoul(trace.substr(2, 10), NULL, 16);
+    std::cout << addr << std::endl;
+  }
 
   return 0;
 

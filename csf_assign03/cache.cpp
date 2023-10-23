@@ -4,7 +4,11 @@
 #include <string>
 
 // Method to handle write operations
-void Cache::write(uint32_t address, int currentTime) {
+void Cache::write(uint32_t address, uint32_t tag, int currentTime) {
+    
+
+
+
     // Check if the address is already in cache
     if (this->set.find(address) != this->set.end()) {
         // Update the access time and dirty flag
@@ -26,7 +30,7 @@ void Cache::write(uint32_t address, int currentTime) {
 }
 
 // Method to handle read operations
-void Cache::read(uint32_t address, int currentTime) {
+void Cache::read(uint32_t address, uint32_t tag, int currentTime) {
     if (this->set.find(address) != this->set.end()) {
         // Update the access time
         this->set[address].access_ts = currentTime;
@@ -45,3 +49,12 @@ void Cache::read(uint32_t address, int currentTime) {
     cycles++;
 }
 
+void Cache::print_stats() {
+    std::cout << "Total loads: " << this->load_hits + this->load_misses << std::endl;
+    std::cout << "Total stores" << this->store_misses + this->store_hits << std::endl;
+    std::cout << "Load hits: " << this->load_hits << std::endl;
+    std::cout << "Load misses: " << this->load_misses << std::endl;
+    std::cout << "Store hits:" << this->store_hits << std::endl;
+    std::cout << "Store misses" << this->store_misses << std::endl;
+    std::cout << "Total cycles" << this->cycles << std::endl;
+}

@@ -7,16 +7,16 @@
 #include <iostream>
 
 struct Slots { bool is_dirty; int load_ts, access_ts; };
+typedef std::unordered_map<uint32_t, Slots> line;
 
 class Cache{
   private:
+    std::vector<line> sets;
+
     int sets_in_cache, blocks_per_set, block_size;
     bool is_write_through, is_write_allocate, is_lru;
     int load_hits = 0, load_misses = 0, store_hits = 0;
     int store_misses = 0, cycles = 0;
-
-    std::unordered_map<uint32_t, Slots> set;
-
 
   public:
     Cache(
@@ -35,11 +35,11 @@ class Cache{
       this->is_lru = is_lru;
     };
 
-    void read(uint32_t address, int currentTime);
+    void read(uint32_t address, uint32_t tag, int currentTime);
 
-    void write(uint32_t address, int currentTime);
+    void write(uint32_t address, uint32_t tag, int currentTime);
 
-    
+    void print_stats();
 };
 
 #endif
