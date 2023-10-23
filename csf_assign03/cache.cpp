@@ -4,29 +4,42 @@
 #include <string>
 
 // Method to handle write operations
-void Cache::write(uint32_t address, uint32_t tag, int currentTime) {
+void Cache::write(row &set, uint32_t tag, int currentTime) {
+    auto it = set.find(tag);
+
+    //checking if address is in cache
+    if (it != set.end()) {
+        //since we're writing to an aready stored position
+        store_hits++;
+
+        it->second.access_ts = currentTime;
+
+        if (is_write_through) {
+            it->second.is_dirty = false;
+        } else {
+            it->second.is_dirty = true;
+        } 
+    } else {
+        store_misses++;
+
+        if (is_write_allocate) {
+            if (set.size() >= blocks_per_set) {
+                auto lru = set.begin();
+                for (auto itr = set.begin(); itr != set.end(); ++itr) {
+                    if (itr->second.access_ts < lru->second.access_ts) {
+                        lru = itr;
+                    }
+                }
+                set.erase(lru);
+            }
+
+            
+        }
+    }
     
 
 
-
-    // Check if the address is already in cache
-    if (this->set.find(address) != this->set.end()) {
-        // Update the access time and dirty flag
-        this->set[address].access_ts = currentTime;
-        this->set[address].is_dirty = true; // since it's a write operation
-        store_hits++;
-    } else {
-        // If it's a miss and the cache uses write allocate, add it to the cache
-        if (this->is_write_allocate) {
-            // Handle the case where the cache set might be full
-            //STILL TODO
-
-            // Add the new address to the cache
-            this->set[address] = Slots{true, currentTime, currentTime}; // is_dirty is true because we're writing
-        }
-        store_misses++;
-    }
-    cycles++;
+    
 }
 
 // Method to handle read operations

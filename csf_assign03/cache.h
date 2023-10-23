@@ -1,17 +1,19 @@
 #ifndef CACHE_H
 #define CACHE_H
 
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <unordered_map>
 #include <iostream>
+#include <vector>
 
 struct Slots { bool is_dirty; int load_ts, access_ts; };
-typedef std::unordered_map<uint32_t, Slots> line;
+typedef std::unordered_map<uint32_t, Slots> row;
 
 class Cache{
   private:
-    std::vector<line> sets;
+    std::vector<row> sets;
 
     int sets_in_cache, blocks_per_set, block_size;
     bool is_write_through, is_write_allocate, is_lru;
@@ -35,9 +37,9 @@ class Cache{
       this->is_lru = is_lru;
     };
 
-    void read(uint32_t address, uint32_t tag, int currentTime);
+    void read(uint32_t index, uint32_t tag, int currentTime);
 
-    void write(uint32_t address, uint32_t tag, int currentTime);
+    void write(row &set_pos, uint32_t tag, int currentTime);
 
     void print_stats();
 };

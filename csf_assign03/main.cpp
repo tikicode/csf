@@ -36,18 +36,23 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  Cache cache(sets_in_cache, blocks_per_set, block_size, is_write_allocate, is_write_through, is_lru);
+
   int time = 0;
   int offset = log2(block_size);
-  int index = log2(sets_in_cache);
+  int n_sets = log2(sets_in_cache);
   char action;
-  uint32_t address;
+  uint32_t address, tag, index;
   std::string trace; 
   while (std::getline(std::cin, trace)) {
     char action = trace.at(0);
-    uint32_t addr = (uint32_t)std::stoul(trace.substr(2, 10), NULL, 16);
-    std::cout << addr << std::endl;
-  }
-
+    address = (uint32_t)std::stoul(trace.substr(2, 10), NULL, 16);
+    tag = address >> (index + offset);
+    // extract the bits of the index using a binary mask (0 if 0, 1... if mult of 2)
+    index = (address >> offset) & (n_sets - 1);
+    if (action == 'l') cache.read(index, tag, time);
+    else cache.write(index, tag, time);
+    ++time;
+  }
   return 0;
-
 }
