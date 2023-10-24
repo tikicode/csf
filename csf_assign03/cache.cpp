@@ -42,6 +42,7 @@ void Cache::read(uint32_t index, uint32_t tag, int current_time) {
   }
 }
 
+//handle writing to cache depending on implementation
 void Cache::handle_write_action(uint32_t index, uint32_t tag, int current_time) {
   if (is_lru) {
     if (sets[index].size() < blocks_per_set) {
@@ -62,6 +63,7 @@ void Cache::handle_write_action(uint32_t index, uint32_t tag, int current_time) 
     }
   } else {
     //no FIFO implementation for MS2
+    return;
   }
 }
 
