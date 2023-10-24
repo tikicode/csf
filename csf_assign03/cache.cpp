@@ -1,4 +1,5 @@
 #include "cache.h"
+#include <cstdint>
 #include <iostream>
 #include <unordered_map>
 #include <string>
@@ -16,7 +17,7 @@ void Cache::write(uint32_t index, uint32_t tag, int current_time) {
     cycles += (is_write_allocate ? 100 : 0) + (is_write_back ? 0 : 25 * block_size);
     store_misses++;
     if (is_write_allocate) {
-      // add new block to cache 
+      handle_write_action(index, tag, current_time); 
       return;
     }
   }
@@ -35,9 +36,32 @@ void Cache::read(uint32_t index, uint32_t tag, int current_time) {
     cycles += 25 * block_size + 1;
     load_misses++;
     if (is_write_allocate) {
-    // add new block to cache 
+      handle_write_action(index, tag, current_time); 
       return;
     }
+  }
+}
+
+void Cache::handle_write_action(uint32_t index, uint32_t tag, int current_time) {
+  if (is_lru) {
+    if (sets[index].size() < blocks_per_set) {
+      sets[index][tag] = {false, current_time};
+    } else {
+      uint32_t lru_tag = tag;
+      int oldest_time = current_time;
+      for (const auto& block : sets[index]) {
+        if (block.second.access_ts < oldest_time) {
+          oldest_time = block.second.access_ts;
+          lru_tag = block.first;
+        }
+      }
+
+      sets[index].erase(lru_tag);
+
+      sets[index][tag] = {false, current_time};
+    }
+  } else {
+    //no FIFO implementation for MS2
   }
 }
 

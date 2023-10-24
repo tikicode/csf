@@ -40,6 +40,8 @@ class Cache{
 
     void write(uint32_t index, uint32_t tag, int current_time);
 
+    void handle_write_action(uint32_t index, uint32_t tag, int current_time);
+
     void print_stats();
 };
 
