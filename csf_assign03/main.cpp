@@ -6,7 +6,7 @@
 
 bool check_pow2(int x, int lim) {
   if (x < lim) return false;
-  return (std::ceil(log2(x)) == std::floor(log2(x)));
+    return (x > 0) && ((x & (x - 1)) == 0);
 }
 
 int main(int argc, char** argv) {
@@ -41,14 +41,12 @@ int main(int argc, char** argv) {
   int time = 0;
   int offset = log2(block_size);
   int n_sets = log2(sets_in_cache);
-  char action;
-  uint32_t address, tag, index;
+  uint32_t address, tag, index = 0;
   std::string trace; 
   while (std::getline(std::cin, trace)) {
     char action = trace.at(0);
     address = (uint32_t)std::stoul(trace.substr(2, 10), NULL, 16);
     tag = address >> (index + offset);
-    // extract the bits of the index using a binary mask (0 if 0, 1... if mult of 2)
     index = (address >> offset) & (n_sets - 1);
     if (action == 'l') cache.read(index, tag, time);
     else cache.write(index, tag, time);

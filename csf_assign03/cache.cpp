@@ -45,8 +45,8 @@ void Cache::read(uint32_t index, uint32_t tag, int current_time) {
 //handle writing to cache depending on implementation
 void Cache::handle_write_action(uint32_t index, uint32_t tag, int current_time) {
   if (is_lru) {
-    if (sets[index].size() < blocks_per_set) {
-      sets[index][tag] = {false, current_time};
+    if ((int) sets[index].size() < blocks_per_set) {
+      sets[index][tag] = {false, current_time, current_time};
     } else {
       uint32_t lru_tag = tag;
       int oldest_time = current_time;
@@ -59,7 +59,7 @@ void Cache::handle_write_action(uint32_t index, uint32_t tag, int current_time) 
 
       sets[index].erase(lru_tag);
 
-      sets[index][tag] = {false, current_time};
+      sets[index][tag] = {false, current_time, current_time};
     }
   } else {
     //no FIFO implementation for MS2
