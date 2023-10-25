@@ -72,7 +72,7 @@ void Cache::print_stats() {
     std::cout << "Total stores: " << this->store_misses + this->store_hits << std::endl;
     std::cout << "Load hits: " << this->load_hits << std::endl;
     std::cout << "Load misses: " << this->load_misses << std::endl;
-    std::cout << "Store hits:" << this->store_hits << std::endl;
-    std::cout << "Store misses" << this->store_misses << std::endl;
-    std::cout << "Total cycles" << this->cycles << std::endl;
+    std::cout << "Store hits: " << this->store_hits << std::endl;
+    std::cout << "Store misses: " << this->store_misses << std::endl;
+    std::cout << "Total cycles: " << this->cycles << std::endl;
 }
