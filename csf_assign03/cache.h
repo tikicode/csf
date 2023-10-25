@@ -34,6 +34,10 @@ class Cache{
       this->is_write_allocate = is_write_allocate;
       this->is_write_back = is_write_back;
       this->is_lru = is_lru;
+
+      for (int i = 0; i < sets_in_cache; ++i) {
+        sets.push_back(row());
+      }
     };
 
     void read(uint32_t index, uint32_t tag, int current_time);

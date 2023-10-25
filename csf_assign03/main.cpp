@@ -52,5 +52,6 @@ int main(int argc, char** argv) {
     else cache.write(index, tag, time);
     ++time;
   }
+  cache.print_stats();
   return 0;
 }

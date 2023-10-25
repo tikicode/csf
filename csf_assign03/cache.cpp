@@ -69,7 +69,7 @@ void Cache::handle_write_action(uint32_t index, uint32_t tag, int current_time) 
 
 void Cache::print_stats() {
     std::cout << "Total loads: " << this->load_hits + this->load_misses << std::endl;
-    std::cout << "Total stores" << this->store_misses + this->store_hits << std::endl;
+    std::cout << "Total stores: " << this->store_misses + this->store_hits << std::endl;
     std::cout << "Load hits: " << this->load_hits << std::endl;
     std::cout << "Load misses: " << this->load_misses << std::endl;
     std::cout << "Store hits:" << this->store_hits << std::endl;
