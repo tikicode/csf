@@ -1,6 +1,7 @@
 #include "cache.h"
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <unordered_map>
 #include <string>
 
@@ -9,10 +10,9 @@ void Cache::write(uint32_t index, uint32_t tag, int current_time) {
   auto block = sets[index].find(tag);
   if (block != sets[index].end()) {
     ++store_hits;
-    cycles += is_write_back ? 1 : 100;
+    cycles += (is_write_back ? 1 : 100) + 1;
     block->second.access_ts = current_time;
     block->second.is_dirty = is_write_back;
-    block->second.access_ts = current_time;
   }
   else {
     ++store_misses;
@@ -50,7 +50,7 @@ void Cache::handle_write_action(uint32_t index, uint32_t tag, int current_time) 
       sets[index][tag] = {false, current_time, current_time};
     } else {
       uint32_t lru_tag = tag;
-      int oldest_time = current_time;
+      int oldest_time = std::numeric_limits<int>::max();;
       for (const auto& block : sets[index]) {
         if (block.second.access_ts < oldest_time) {
           oldest_time = block.second.access_ts;
