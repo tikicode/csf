@@ -36,10 +36,8 @@ void Cache::read(uint32_t index, uint32_t tag, int current_time) {
   else {
     ++load_misses;
     cycles += 25 * block_size + 1;
-    if (is_write_allocate) {
-      handle_write_action(index, tag, current_time); 
-      return;
-    }
+    handle_write_action(index, tag, current_time); 
+    return;
   }
 }
 
@@ -50,7 +48,7 @@ void Cache::handle_write_action(uint32_t index, uint32_t tag, int current_time) 
       sets[index][tag] = {false, current_time, current_time};
     } else {
       uint32_t lru_tag = tag;
-      int oldest_time = std::numeric_limits<int>::max();;
+      int oldest_time = current_time;
       for (const auto& block : sets[index]) {
         if (block.second.access_ts < oldest_time) {
           oldest_time = block.second.access_ts;
