@@ -8,14 +8,15 @@
 void Cache::write(uint32_t index, uint32_t tag, int current_time) {
   auto block = sets[index].find(tag);
   if (block != sets[index].end()) {
-    store_hits++;
+    ++store_hits;
     cycles += is_write_back ? 1 : 100;
     block->second.access_ts = current_time;
     block->second.is_dirty = is_write_back;
+    block->second.access_ts = current_time;
   }
   else {
+    ++store_misses;
     cycles += (is_write_allocate ? 100 : 0) + (is_write_back ? 0 : 25 * block_size);
-    store_misses++;
     if (is_write_allocate) {
       handle_write_action(index, tag, current_time); 
       return;
@@ -28,13 +29,13 @@ void Cache::write(uint32_t index, uint32_t tag, int current_time) {
 void Cache::read(uint32_t index, uint32_t tag, int current_time) {
   auto block = sets[index].find(tag);
   if (block != sets[index].end()) {
-    load_hits++;
-    cycles++;
+    ++load_hits;
+    ++cycles;
     block->second.access_ts = current_time;
   }
   else {
+    ++load_misses;
     cycles += 25 * block_size + 1;
-    load_misses++;
     if (is_write_allocate) {
       handle_write_action(index, tag, current_time); 
       return;

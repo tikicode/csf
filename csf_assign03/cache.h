@@ -17,7 +17,7 @@ class Cache{
 
     int sets_in_cache, blocks_per_set, block_size;
     bool is_write_back, is_write_allocate, is_lru;
-    int load_hits, load_misses, store_hits, store_misses, cycles;
+    long int load_hits = 0, load_misses = 0, store_hits = 0, store_misses = 0, cycles = 0;
 
   public:
     Cache(

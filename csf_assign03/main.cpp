@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  bool is_write_allocate = strcmp(argv[4], "write-allocate");
+  bool is_write_allocate = !strcmp(argv[4], "write-allocate");
   bool is_write_back = !(strcmp(argv[5], "write-through"));
   bool is_lru = !(strcmp(argv[6], "lru"));
 
@@ -40,14 +40,14 @@ int main(int argc, char** argv) {
 
   int time = 0;
   int offset = log2(block_size);
-  int n_sets = log2(sets_in_cache);
+  int index_bits = log2(sets_in_cache);
   uint32_t address, tag, index = 0;
   std::string trace; 
   while (std::getline(std::cin, trace)) {
     char action = trace.at(0);
     address = (uint32_t)std::stoul(trace.substr(2, 10), NULL, 16);
-    tag = address >> (index + offset);
-    index = (address >> offset) & (n_sets - 1);
+    index = (address >> offset) & (sets_in_cache - 1);
+    tag = address >> (index_bits + offset);
     if (action == 'l') cache.read(index, tag, time);
     else cache.write(index, tag, time);
     ++time;
