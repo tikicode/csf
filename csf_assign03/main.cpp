@@ -1,59 +1,70 @@
 #include <cmath>
+#include <cstring>
 #include <iostream>
-#include <string.h>
 #include <string>
 #include "cache.h"
 
-bool check_pow2(int x, int lim) {
-  if (x < lim) return false;
-    return (x > 0) && ((x & (x - 1)) == 0);
+bool isPowerOfTwo(int x, int minimum) {
+  return x >= minimum && (x > 0) && ((x & (x - 1)) == 0);
 }
 
-int main(int argc, char** argv) {
+bool validateArguments(int argc, char** argv, int& sets, int& blocks, int& blockSize, bool& writeAllocate, bool& writeBack, bool& lru) {
   if (argc != 7) {
-    std::cerr << "Invalid number of arugments" << std::endl;
-    return 1;
+    std::cerr << "Invalid number of arguments" << std::endl;
+    return false;
   }
 
-  int sets_in_cache = std::stoi(argv[1]);
-  int blocks_per_set = std::stoi(argv[2]);
-  int block_size = std::stoi(argv[3]);
+  sets = std::stoi(argv[1]);
+  blocks = std::stoi(argv[2]);
+  blockSize = std::stoi(argv[3]);
 
-  if ((!check_pow2(sets_in_cache, 1) ||
-      !check_pow2(blocks_per_set, 1) ||
-      !check_pow2(block_size, 4))
-  ) {
+  if (!isPowerOfTwo(sets, 1) || !isPowerOfTwo(blocks, 1) || !isPowerOfTwo(blockSize, 4)) {
     std::cerr << "Invalid set, block, or block_size value" << std::endl;
-    return 1;
+    return false;
   }
 
-  bool is_write_allocate = !strcmp(argv[4], "write-allocate");
-  bool is_write_back = !(strcmp(argv[5], "write-back"));
-  bool is_lru = !(strcmp(argv[6], "lru"));
+  writeAllocate = !strcmp(argv[4], "write-allocate");
+  writeBack = !(strcmp(argv[5], "write-back"));
+  lru = !(strcmp(argv[6], "lru"));
 
-  if (!is_write_allocate && is_write_back) {
+  if (!writeAllocate && writeBack) {
     std::cerr << "Cannot use no-write-allocate and write-back together" << std::endl;
-    return 1;
+    return false;
   }
 
-  Cache cache(sets_in_cache, blocks_per_set, block_size, is_write_allocate, is_write_back, is_lru);
+  return true;
+}
 
+void processTrace(Cache& cache, int sets, int blockSize) {
   int time = 0;
-  int offset = log2(block_size);
-  int index_bits = log2(sets_in_cache);
+  int offset = log2(blockSize);
+  int indexBits = log2(sets);
   uint32_t address, tag, index;
-  std::string trace; 
+  std::string trace;
 
   while (std::getline(std::cin, trace)) {
     char action = trace.at(0);
     address = (uint32_t)std::stoul(trace.substr(2, 10), NULL, 16);
-    index = (address >> offset) & (sets_in_cache - 1);
-    tag = address >> (index_bits + offset);
+    index = (address >> offset) & (sets - 1);
+    tag = address >> (indexBits + offset);
     if (action == 'l') cache.read(index, tag, time);
     else cache.write(index, tag, time);
     ++time;
   }
 
   cache.print_stats();
+}
+
+int main(int argc, char** argv) {
+  int sets_in_cache, blocks_per_set, block_size;
+  bool is_write_allocate, is_write_back, is_lru;
+
+  if (!validateArguments(argc, argv, sets_in_cache, blocks_per_set, block_size, is_write_allocate, is_write_back, is_lru)) {
+    return 1;
+  }
+
+  Cache cache(sets_in_cache, blocks_per_set, block_size, is_write_allocate, is_write_back, is_lru);
+  processTrace(cache, sets_in_cache, block_size);
+
   return 0;
 }

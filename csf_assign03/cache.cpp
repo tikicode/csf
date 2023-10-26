@@ -16,8 +16,8 @@ void Cache::write(uint32_t index, uint32_t tag, int current_time) {
   }
   else {
     ++store_misses;
-    if (is_write_back) cycles += 25 * block_size; // Write block main memory in 25 * n_bits cycles
-    if (is_write_allocate) cycles += 25 * block_size; // Allocate to mem
+    if (is_write_back) cycles += 25 * block_size; 
+    if (is_write_allocate) cycles += 25 * block_size;
     if (is_write_allocate) {
       handle_write_action(index, tag, current_time); 
       return;
