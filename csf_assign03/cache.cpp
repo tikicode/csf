@@ -8,6 +8,7 @@
 
 void Cache::write(uint32_t index, uint32_t tag, int current_time) {
   auto block = sets[index].find(tag);
+  fifo.push(tag);
   if (block != sets[index].end()) {
     ++store_hits;
     if (is_write_back)
@@ -42,29 +43,28 @@ void Cache::read(uint32_t index, uint32_t tag, int current_time) {
 
 void Cache::handle_write_action(uint32_t index, uint32_t tag,
                                 int current_time) {
-  if (is_lru) {
-    if ((int)sets[index].size() < blocks_per_set) {
-      Slots slot = {false, current_time, current_time};
-      sets[index][tag] = slot;
-    } else {
-      uint32_t lru_tag = tag;
-      int oldest_time = current_time;
-      for (const auto& block : sets[index]) {
-        if (block.second.access_ts < oldest_time) {
-          oldest_time = block.second.access_ts;  // find oldest cached tag
-          lru_tag = block.first;
-        }
-      }
-      sets[index].erase(lru_tag);
-      if (is_write_back)
-        cycles += 25 * block_size + 1;  // write evicted block to memory
-      Slots slot = {false, current_time, current_time};
-      sets[index][tag] = slot;
-    }
-  } else {
-    // no FIFO implementation for MS2
+  if ((int)sets[index].size() < blocks_per_set) {
+    Slots slot = {false, current_time, current_time};
+    sets[index][tag] = slot;
     return;
   }
+  uint32_t del_tag;
+  int oldest_time = current_time;
+  int cur_time = current_time;
+  for (const auto& block : sets[index]) {
+    if (is_lru) cur_time = block.second.access_ts;
+    else cur_time = block.second.insert_ts;
+    if (cur_time < oldest_time) {
+      if (is_lru) oldest_time = block.second.access_ts;  // find oldest cached tag
+      else oldest_time = block.second.insert_ts; 
+      del_tag = block.first;
+    }
+  }
+  sets[index].erase(del_tag);
+  if (is_write_back)
+    cycles += 25 * block_size + 1;  // write evicted block to memory
+  Slots slot = {false, current_time, current_time};
+  sets[index][tag] = slot;
 }
 
 void Cache::print_stats() {

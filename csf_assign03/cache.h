@@ -6,6 +6,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <queue>
 
 struct Slots {
   bool is_dirty;
@@ -19,6 +20,7 @@ typedef std::unordered_map<uint32_t, Slots> row;
 class Cache {
  private:
   std::vector<row> sets;
+  std::queue<uint32_t> fifo;
   int sets_in_cache, blocks_per_set, block_size;
   bool is_write_back, is_write_allocate, is_lru;
   long int load_hits = 0, load_misses = 0, store_hits = 0, store_misses = 0,
