@@ -1,0 +1,7 @@
+Total loads: 318197
+Total stores: 197486
+Load hits: 309238
+Load misses: 8959
+Store hits: 161196
+Store misses: 36290
+Total cycles: 22056083

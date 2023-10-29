@@ -8,7 +8,6 @@
 
 void Cache::write(uint32_t index, uint32_t tag, int current_time) {
   auto block = sets[index].find(tag);
-  fifo.push(tag);
   if (block != sets[index].end()) {
     ++store_hits;
     if (is_write_back)
