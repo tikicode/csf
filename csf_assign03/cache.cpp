@@ -54,8 +54,8 @@ void Cache::handle_write_action(uint32_t index, uint32_t tag,
     if (is_lru) cur_time = block.second.access_ts;
     else cur_time = block.second.insert_ts;
     if (cur_time < oldest_time) {
-      if (is_lru) oldest_time = block.second.access_ts;  // find oldest cached tag
-      else oldest_time = block.second.insert_ts; 
+      if (is_lru) oldest_time = block.second.access_ts;  // find oldest accessed cached tag
+      else oldest_time = block.second.insert_ts; // find oldest inserted cached tag
       del_tag = block.first;
     }
   }

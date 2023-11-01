@@ -103,9 +103,14 @@ the caches increased.
 
 Based on our testing, we determined that the best cache configuration
 for a 64KB cache, which is the most common size for cpu based caches,
-maintains the highest possible byte size, strikes a balance between
+maintains a high byte size, strikes a balance between
 number of sets and number of blocks, skewing toward a higher number 
 of blocks, uses LRU for its ejection method, and is write-back to
 reduce the total number of cycles required. Our optimal parameters are:
 
-<insert>
+set_size=32
+block_size=64
+byte_size=32
+write_policy=write-allocate
+write_through=write-back
+cache_type=lru
