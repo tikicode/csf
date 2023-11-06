@@ -72,35 +72,8 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
   size_t mid = begin + size/2;
 
   // TODO: parallelize the recursive sorting
-    pid_t pid_l = fork();
-    if (pid_l == -1) {
-      fprintf(stderr, "failed to load process");
-    } else if (pid_l == 0) {
-      merge_sort(arr, begin, mid, threshold);
-      exit(0);
-    }
-
-    pid_t pid_r = fork();
-    if (pid_r == -1) {
-      fprintf(stderr, "failed to load process");
-    } else if (pid_r == 0) {
-      merge_sort(arr, mid, end, threshold);
-      exit(0);
-    }
-
-    int left_wstatus;
-    // blocks until the process indentified by pid_to_wait_for completes
-    pid_t left_pid = waitpid(pid_l, &left_wstatus, 0);
-    if (left_pid == -1) {
-      fprintf(stderr, "child process failure");
-    }
-
-    int right_wstatus;
-    // blocks until the process indentified by pid_to_wait_for completes
-    pid_t right_pid = waitpid(pid_r, &right_wstatus, 0);
-    if (right_pid == -1) {
-      fprintf(stderr, "child process failure");
-    }
+  merge_sort(arr, begin, mid, threshold);
+  merge_sort(arr, mid, end, threshold);
 
   // allocate temp array now, so we can avoid unnecessary work
   // if the malloc fails
@@ -130,6 +103,21 @@ int handle_child_work(size_t is_left, int64_t *arr, size_t begin, size_t end, si
   } else {
     merge_sort(arr, mid, end, threshold);
   }
+
+  int64_t *temp_arr = (int64_t *) malloc(size * sizeof(int64_t));
+  if (temp_arr == NULL)
+    fatal("malloc() failed");
+
+  // child processes completed successfully, so in theory
+  // we should be able to merge their results
+  merge(arr, begin, mid, end, temp_arr);
+
+  // copy data back to main array
+  for (size_t i = 0; i < size; i++)
+    arr[begin + i] = temp_arr[i];
+
+  // now we can free the temp array
+  free(temp_arr);
 
   return 0;
 }
@@ -180,8 +168,40 @@ int main(int argc, char **argv) {
   }
 
   // TODO: sort the data!
+  if (num_elements < threshold) {
     merge_sort(data, 0, num_elements, threshold);
+  } else {
+    pid_t pid_l = fork();
+    if (pid_l == -1) {
+      fprintf(stderr, "failed to load process");
+    } else if (pid_l == 0) {
+      int retcode = handle_child_work(1, data, 0, num_elements, threshold);
+      exit(retcode);
+    }
 
+    pid_t pid_r = fork();
+    if (pid_r == -1) {
+      fprintf(stderr, "failed to load process");
+    } else if (pid_r == 0) {
+      int retcode = handle_child_work(0, data, 0, num_elements, threshold);
+      exit(retcode);
+    }
+
+    int left_wstatus;
+    // blocks until the process indentified by pid_to_wait_for completes
+    pid_t left_pid = waitpid(pid_l, &left_wstatus, 0);
+    if (left_pid == -1) {
+      fprintf(stderr, "child process failure");
+    }
+
+    int right_wstatus;
+    // blocks until the process indentified by pid_to_wait_for completes
+    pid_t right_pid = waitpid(pid_r, &right_wstatus, 0);
+    if (right_pid == -1) {
+      fprintf(stderr, "child process failure");
+    }
+  }
+  
 
   // TODO: unmap and close the file
 
