@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -107,12 +108,25 @@ int main(int argc, char **argv) {
   size_t threshold = (size_t) strtoul(argv[2], &end, 10);
   if (end != argv[2] + strlen(argv[2])) {
     // TODO: report an error (threshold value is invalid)
+    fprintf(stderr, "threshold value is invalid");
+    return -1;
   }
 
   // TODO: open the file
-
+  FILE *input = fopen(argv[1], "r");
+  if (input == NULL) {
+    fprintf(stderr, "Invalid input file");
+    return -2;
+  }
   // TODO: use fstat to determine the size of the file
-
+  struct stat buffer;
+  int fd = fileno(input);
+  if (fstat(fd, &buffer) == -1) {
+    perror("fstat");
+    fclose(input);
+    return 1;
+  }
+  
   // TODO: map the file into memory using mmap
 
   // TODO: sort the data!
