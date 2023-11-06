@@ -72,8 +72,37 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
   size_t mid = begin + size/2;
 
   // TODO: parallelize the recursive sorting
-  merge_sort(arr, begin, mid, threshold);
-  merge_sort(arr, mid, end, threshold);
+  pid_t pid_left = fork();
+  if (pid_left == -1) {
+    // fork failed to start a new process
+    fprintf(stderr, "fork failed to start a new process");
+  } else if (pid_left == 0) {
+    merge_sort(arr, begin, mid, threshold);
+    exit(0);
+  }
+  
+  pid_t pid_right = fork();
+  if (pid_right == -1) {
+    // fork failed to start a new process
+    fprintf(stderr, "fork failed to start a new process");
+  } else if (pid_right == 0) {
+    merge_sort(arr, mid, end, threshold);
+    exit(0);
+  }
+
+  int left_wstatus;
+  // blocks until the process indentified by pid_to_wait_for completes
+  pid_t left_pid = waitpid(pid_left, &left_wstatus, 0);
+  if (left_pid == -1) {
+    fprintf(stderr, "child process failure");
+  }
+
+  int right_wstatus;
+  // blocks until the process indentified by pid_to_wait_for completes
+  pid_t right_pid = waitpid(pid_right, &right_wstatus, 0);
+  if (right_pid == -1) {
+    fprintf(stderr, "child process failure");
+  }
 
   // allocate temp array now, so we can avoid unnecessary work
   // if the malloc fails
@@ -113,25 +142,41 @@ int main(int argc, char **argv) {
   }
 
   // TODO: open the file
-  FILE *input = fopen(argv[1], "r");
-  if (input == NULL) {
+  int fd = open(filename, O_RDWR);
+  if (fd < 0) {
     fprintf(stderr, "Invalid input file");
-    return -2;
+    return 2;
   }
+
   // TODO: use fstat to determine the size of the file
   struct stat buffer;
-  int fd = fileno(input);
-  if (fstat(fd, &buffer) == -1) {
-    perror("fstat");
-    fclose(input);
-    return 1;
+  if (fstat(fd, &buffer) != 0) {
+    fprintf(stderr, "Error getting file statistics");
+    return 2;
   }
-  
+
+
+  size_t file_size_bytes = buffer.st_size;
+  size_t num_elements = file_size_bytes/8;
   // TODO: map the file into memory using mmap
+
+  int64_t *data = mmap(NULL, file_size_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  close(fd);
+
+  if (data == MAP_FAILED) {
+    fprintf(stderr, "could not map file");
+    return 3;
+  }
 
   // TODO: sort the data!
 
+  merge_sort(data, 0, num_elements,  threshold);
+
   // TODO: unmap and close the file
 
+  munmap(data, file_size_bytes);
+
   // TODO: exit with a 0 exit code if sort was successful
+
+  return 0;
 }
