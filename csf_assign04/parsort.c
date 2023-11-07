@@ -75,51 +75,7 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
   merge_sort(arr, begin, mid, threshold);
   merge_sort(arr, mid, end, threshold);
 
-  // allocate temp array now, so we can avoid unnecessary work
-  // if the malloc fails
-  int64_t *temp_arr = (int64_t *) malloc(size * sizeof(int64_t));
-  if (temp_arr == NULL)
-    fatal("malloc() failed");
-
-  // child processes completed successfully, so in theory
-  // we should be able to merge their results
-  merge(arr, begin, mid, end, temp_arr);
-
-  // copy data back to main array
-  for (size_t i = 0; i < size; i++)
-    arr[begin + i] = temp_arr[i];
-
-  // now we can free the temp array
-  free(temp_arr);
-
   // success!
-}
-
-int handle_child_work(size_t is_left, int64_t *arr, size_t begin, size_t end, size_t threshold) {
-  size_t size = end - begin;
-  size_t mid = begin + size/2;
-  if(is_left) {
-    merge_sort(arr, begin, mid, threshold);
-  } else {
-    merge_sort(arr, mid, end, threshold);
-  }
-
-  int64_t *temp_arr = (int64_t *) malloc(size * sizeof(int64_t));
-  if (temp_arr == NULL)
-    fatal("malloc() failed");
-
-  // child processes completed successfully, so in theory
-  // we should be able to merge their results
-  merge(arr, begin, mid, end, temp_arr);
-
-  // copy data back to main array
-  for (size_t i = 0; i < size; i++)
-    arr[begin + i] = temp_arr[i];
-
-  // now we can free the temp array
-  free(temp_arr);
-
-  return 0;
 }
 
 
@@ -168,44 +124,62 @@ int main(int argc, char **argv) {
   }
 
   // TODO: sort the data!
-  if (num_elements < threshold) {
+    // Sort the data if below threshold or else fork child processes
+  if (num_elements <= threshold) {
     merge_sort(data, 0, num_elements, threshold);
   } else {
-    pid_t pid_l = fork();
-    if (pid_l == -1) {
-      fprintf(stderr, "failed to load process");
-    } else if (pid_l == 0) {
-      int retcode = handle_child_work(1, data, 0, num_elements, threshold);
-      exit(retcode);
+    pid_t pid_l, pid_r;
+    int status_l, status_r;
+
+    // Sort left half in child process
+    pid_l = fork();
+    if (pid_l == 0) {
+      merge_sort(data, 0, num_elements / 2, threshold);
+      exit(0); // Child exits after sorting
+    } else if (pid_l < 0) {
+      fatal("Failed to fork left child");
     }
 
-    pid_t pid_r = fork();
-    if (pid_r == -1) {
-      fprintf(stderr, "failed to load process");
-    } else if (pid_r == 0) {
-      int retcode = handle_child_work(0, data, 0, num_elements, threshold);
-      exit(retcode);
+    // Sort right half in child process
+    pid_r = fork();
+    if (pid_r == 0) {
+      merge_sort(data, num_elements / 2, num_elements, threshold);
+      exit(0); // Child exits after sorting
+    } else if (pid_r < 0) {
+      fatal("Failed to fork right child");
     }
 
-    int left_wstatus;
-    // blocks until the process indentified by pid_to_wait_for completes
-    pid_t left_pid = waitpid(pid_l, &left_wstatus, 0);
-    if (left_pid == -1) {
-      fprintf(stderr, "child process failure");
+    // Wait for both child processes to finish
+    waitpid(pid_l, &status_l, 0);
+    if (WIFEXITED(status_l) == 0 || WEXITSTATUS(status_l) != 0) {
+      fatal("Left child did not terminate correctly");
     }
 
-    int right_wstatus;
-    // blocks until the process indentified by pid_to_wait_for completes
-    pid_t right_pid = waitpid(pid_r, &right_wstatus, 0);
-    if (right_pid == -1) {
-      fprintf(stderr, "child process failure");
+    waitpid(pid_r, &status_r, 0);
+    if (WIFEXITED(status_r) == 0 || WEXITSTATUS(status_r) != 0) {
+      fatal("Right child did not terminate correctly");
     }
+
+    // Now that both children are done, merge the two sorted halves
+    int64_t *temp_arr = (int64_t *)malloc(num_elements * sizeof(int64_t));
+    if (temp_arr == NULL) {
+      fatal("malloc() failed");
+    }
+
+    merge(data, 0, num_elements / 2, num_elements, temp_arr);
+
+    // Copy data back to main array
+    for (size_t i = 0; i < num_elements; i++) {
+      data[i] = temp_arr[i];
+    }
+
+    // Free the temporary array
+    free(temp_arr);
   }
   
-
   // TODO: unmap and close the file
 
-  munmap(data, num_elements);
+  munmap(data, file_size_bytes);
 
   // TODO: exit with a 0 exit code if sort was successful
   return 0;
