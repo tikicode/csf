@@ -182,5 +182,6 @@ int main(int argc, char **argv) {
   munmap(data, file_size_bytes);
 
   // TODO: exit with a 0 exit code if sort was successful
+  
   return 0;
 }
