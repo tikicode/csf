@@ -90,10 +90,10 @@ int main(int argc, char **argv) {
   const char *filename = argv[1];
   char *end;
   size_t threshold = (size_t) strtoul(argv[2], &end, 10);
-  if (end != argv[2] + strlen(argv[2])) {
+  if (end != argv[2] + strlen(argv[2]) || threshold < 1) {
     // TODO: report an error (threshold value is invalid)
     fprintf(stderr, "threshold value is invalid");
-    return -1;
+    return 1;
   }
 
   // TODO: open the file
@@ -153,17 +153,20 @@ int main(int argc, char **argv) {
     waitpid(pid_l, &status_l, 0);
     if (WIFEXITED(status_l) == 0 || WEXITSTATUS(status_l) != 0) {
       fatal("Left child did not terminate correctly");
+      return 3;
     }
 
     waitpid(pid_r, &status_r, 0);
     if (WIFEXITED(status_r) == 0 || WEXITSTATUS(status_r) != 0) {
       fatal("Right child did not terminate correctly");
+      return 3;
     }
 
     // Now that both children are done, merge the two sorted halves
     int64_t *temp_arr = (int64_t *)malloc(num_elements * sizeof(int64_t));
     if (temp_arr == NULL) {
       fatal("malloc() failed");
+      return 3;
     }
 
     merge(data, 0, num_elements / 2, num_elements, temp_arr);
