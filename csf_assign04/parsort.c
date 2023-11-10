@@ -80,7 +80,7 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
   if (pid_l == -1) {
     fatal("Failed to fork left child");
   } else if (!pid_l) {
-    merge_sort(arr, 0, mid, threshold);
+    merge_sort(arr, begin, mid, threshold);
     exit(0); // Child exits after sorting
   }
 
@@ -95,13 +95,13 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
 
   // Wait for both child processes to finish
   waitpid(pid_l, &status_l, 0);
-  if (!WIFEXITED(status_l) || !WEXITSTATUS(status_l)) {
+  if (!WIFEXITED(status_l) || WEXITSTATUS(status_l)) {
     fatal("Left child did not terminate correctly");
     exit(1);
   }
 
   waitpid(pid_r, &status_r, 0);
-  if (!WIFEXITED(status_r) || !WEXITSTATUS(status_r)) {
+  if (!WIFEXITED(status_r) || WEXITSTATUS(status_r)) {
     fatal("Right child did not terminate correctly");
     exit(1);
   }
