@@ -3,6 +3,9 @@ CONTRIBUTIONS
 TODO: write a brief summary of how each team member contributed to
 the project.
 
+Taran worked on the merge_sort method mostly and Arijit worked on the main mostly.
+Both Arijit and Taran debugged and commented the code as well as worked on the experimentation.
+
 REPORT
 
 TODO: add your report according to the instructions in the
@@ -46,3 +49,4 @@ Test run with threshold 16384
 real    0m0.165s
 user    0m0.271s
 sys     0m0.014s
+

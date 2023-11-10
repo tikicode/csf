@@ -68,10 +68,9 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
   }
 
   // recursively sort halves in parallel
-
   size_t mid = begin + size/2;
 
-// TODO: parallelize the recursive sorting
+// parallelize the recursive sorting
   pid_t pid_l, pid_r;
   int status_l, status_r;
 
@@ -93,7 +92,7 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
     exit(0); // Child exits after sorting
   }
 
-  // Wait for both child processes to finish
+  // Wait for both child processes to finish and handle
   waitpid(pid_l, &status_l, 0);
   if (!WIFEXITED(status_l) || WEXITSTATUS(status_l)) {
     fatal("Left child did not terminate correctly");
@@ -108,10 +107,13 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
 
   // Now that both children are done, merge the two sorted halves
   // Allocate temporary array for merging
-  int64_t *temparr = (int64_t *)malloc(size * sizeof(int64_t));
-  merge(arr, begin, mid, end, temparr);
-  memcpy(arr + begin, temparr, size * sizeof(int64_t));
-  free(temparr);
+  int64_t *temp_arr = (int64_t *)malloc(size * sizeof(int64_t));
+  merge(arr, begin, mid, end, temp_arr);
+
+  for (size_t i = 0; i < size; i++)
+    arr[begin + i] = temp_arr[i];
+
+  free(temp_arr);
   // success!
 }
 
@@ -127,48 +129,41 @@ int main(int argc, char **argv) {
   const char *filename = argv[1];
   char *end;
   size_t threshold = (size_t) strtoul(argv[2], &end, 10);
-  if (end != argv[2] + strlen(argv[2]) || threshold < 1) {
-    // TODO: report an error (threshold value is invalid)
-    fprintf(stderr, "threshold value is invalid");
-    return 1;
+  if (end != argv[2] + strlen(argv[2])) {
+    // report an error (threshold value is invalid)
+    fatal("threshold value is invalid");
   }
 
-  // TODO: open the file
+  // open the file
   int fd = open(filename, O_RDWR);
   if (fd < 0) {
-    fprintf(stderr, "Invalid input file");
+    fatal("threshold value is invalid");
+    close(fd);
     return 1;
   }
 
-  // TODO: use fstat to determine the size of the file
+  // use fstat to determine the size of the file
   struct stat buffer;
   if (fstat(fd, &buffer) != 0) {
-    fprintf(stderr, "Error getting file statistics");
-    return 1;
+    fatal("Error getting file statistics");
   }
-
-
   size_t file_size_bytes = buffer.st_size;
   size_t num_elements = file_size_bytes/8;
-  // TODO: map the file into memory using mmap
 
+  // map the file into memory using mmap
   int64_t *data = mmap(NULL, file_size_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   close(fd);
 
   if (data == MAP_FAILED) {
-    fprintf(stderr, "could not map file");
-    return 1;
+    fatal("could not map file");
   }
 
-  // TODO: sort the data!
-  // Sort the data if below threshold or else fork child processes
+  // sort the data!
   merge_sort(data, 0, num_elements, threshold);
   
-  // TODO: unmap and close the file
-
+  // unmap
   munmap(data, file_size_bytes);
 
-  // TODO: exit with a 0 exit code if sort was successful
-  
+  // exit with a 0 exit code if sort was successful
   return 0;
 }
