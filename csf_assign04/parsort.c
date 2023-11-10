@@ -71,10 +71,47 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
 
   size_t mid = begin + size/2;
 
-  // TODO: parallelize the recursive sorting
-  merge_sort(arr, begin, mid, threshold);
-  merge_sort(arr, mid, end, threshold);
+// TODO: parallelize the recursive sorting
+  pid_t pid_l, pid_r;
+  int status_l, status_r;
 
+  // Sort left half in child process
+  pid_l = fork();
+  if (pid_l == -1) {
+    fatal("Failed to fork left child");
+  } else if (!pid_l) {
+    merge_sort(arr, 0, mid, threshold);
+    exit(0); // Child exits after sorting
+  }
+
+  // Sort right half in child process
+  pid_r = fork();
+  if (pid_r == -1) {
+    fatal("Failed to fork right child");
+  } else if (!pid_r) {
+    merge_sort(arr, mid, end, threshold);
+    exit(0); // Child exits after sorting
+  }
+
+  // Wait for both child processes to finish
+  waitpid(pid_l, &status_l, 0);
+  if (!WIFEXITED(status_l) || !WEXITSTATUS(status_l)) {
+    fatal("Left child did not terminate correctly");
+    exit(1);
+  }
+
+  waitpid(pid_r, &status_r, 0);
+  if (!WIFEXITED(status_r) || !WEXITSTATUS(status_r)) {
+    fatal("Right child did not terminate correctly");
+    exit(1);
+  }
+
+  // Now that both children are done, merge the two sorted halves
+  // Allocate temporary array for merging
+  int64_t *temparr = (int64_t *)malloc(size * sizeof(int64_t));
+  merge(arr, begin, mid, end, temparr);
+  memcpy(arr + begin, temparr, size * sizeof(int64_t));
+  free(temparr);
   // success!
 }
 
@@ -100,14 +137,14 @@ int main(int argc, char **argv) {
   int fd = open(filename, O_RDWR);
   if (fd < 0) {
     fprintf(stderr, "Invalid input file");
-    return 2;
+    return 1;
   }
 
   // TODO: use fstat to determine the size of the file
   struct stat buffer;
   if (fstat(fd, &buffer) != 0) {
     fprintf(stderr, "Error getting file statistics");
-    return 2;
+    return 1;
   }
 
 
@@ -120,65 +157,12 @@ int main(int argc, char **argv) {
 
   if (data == MAP_FAILED) {
     fprintf(stderr, "could not map file");
-    return 3;
+    return 1;
   }
 
   // TODO: sort the data!
-    // Sort the data if below threshold or else fork child processes
-  if (num_elements <= threshold) {
-    merge_sort(data, 0, num_elements, threshold);
-  } else {
-    pid_t pid_l, pid_r;
-    int status_l, status_r;
-
-    // Sort left half in child process
-    pid_l = fork();
-    if (pid_l == 0) {
-      merge_sort(data, 0, num_elements / 2, threshold);
-      exit(0); // Child exits after sorting
-    } else if (pid_l < 0) {
-      fatal("Failed to fork left child");
-    }
-
-    // Sort right half in child process
-    pid_r = fork();
-    if (pid_r == 0) {
-      merge_sort(data, num_elements / 2, num_elements, threshold);
-      exit(0); // Child exits after sorting
-    } else if (pid_r < 0) {
-      fatal("Failed to fork right child");
-    }
-
-    // Wait for both child processes to finish
-    waitpid(pid_l, &status_l, 0);
-    if (WIFEXITED(status_l) == 0 || WEXITSTATUS(status_l) != 0) {
-      fatal("Left child did not terminate correctly");
-      return 3;
-    }
-
-    waitpid(pid_r, &status_r, 0);
-    if (WIFEXITED(status_r) == 0 || WEXITSTATUS(status_r) != 0) {
-      fatal("Right child did not terminate correctly");
-      return 3;
-    }
-
-    // Now that both children are done, merge the two sorted halves
-    int64_t *temp_arr = (int64_t *)malloc(num_elements * sizeof(int64_t));
-    if (temp_arr == NULL) {
-      fatal("malloc() failed");
-      return 3;
-    }
-
-    merge(data, 0, num_elements / 2, num_elements, temp_arr);
-
-    // Copy data back to main array
-    for (size_t i = 0; i < num_elements; i++) {
-      data[i] = temp_arr[i];
-    }
-
-    // Free the temporary array
-    free(temp_arr);
-  }
+  // Sort the data if below threshold or else fork child processes
+  merge_sort(data, 0, num_elements, threshold);
   
   // TODO: unmap and close the file
 
