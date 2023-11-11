@@ -7,16 +7,16 @@
 
 int main(int argc, char **argv) {
   if (argc != 3) {
-    fprintf(stderr, "Usage: %s <size> <output filename>\n"
-                    "  <size> can have 'M' suffix for size in megabytes\n",
+    fprintf(stderr,
+            "Usage: %s <size> <output filename>\n"
+            "  <size> can have 'M' suffix for size in megabytes\n",
             argv[0]);
     exit(1);
   }
 
   char *end;
   size_t size = strtoul(argv[1], &end, 10);
-  if (*end == 'M')
-    size *= (1024U * 1024U);
+  if (*end == 'M') size *= (1024U * 1024U);
 
   FILE *out = fopen(argv[2], "wb");
   if (out == NULL) {

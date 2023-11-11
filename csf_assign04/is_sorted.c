@@ -38,7 +38,10 @@ int main(int argc, char **argv) {
       num_elts++;
       if (curr < prev) {
         fclose(in);
-        fprintf(stderr, "Data values are not sorted! (element %lu is less than element %lu)\n", num_elts, num_elts-1);
+        fprintf(stderr,
+                "Data values are not sorted! (element %lu is less than element "
+                "%lu)\n",
+                num_elts, num_elts - 1);
         return 1;
       }
       prev = curr;

@@ -1,15 +1,15 @@
-#include <stddef.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <assert.h>
-#include <stdio.h>
+#include <fcntl.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 int compare_i64(const void *left_, const void *right_) {
   int64_t left = *(int64_t *)left_;
@@ -26,7 +26,8 @@ void seq_sort(int64_t *arr, size_t begin, size_t end) {
 
 // Merge the elements in the sorted ranges [begin, mid) and [mid, end),
 // copying the result into temparr.
-void merge(int64_t *arr, size_t begin, size_t mid, size_t end, int64_t *temparr) {
+void merge(int64_t *arr, size_t begin, size_t mid, size_t end,
+           int64_t *temparr) {
   int64_t *endl = arr + mid;
   int64_t *endr = arr + end;
   int64_t *left = arr + begin, *right = arr + mid, *dst = temparr;
@@ -51,7 +52,7 @@ void merge(int64_t *arr, size_t begin, size_t mid, size_t end, int64_t *temparr)
   }
 }
 
-void fatal(const char *msg) __attribute__ ((noreturn));
+void fatal(const char *msg) __attribute__((noreturn));
 
 void fatal(const char *msg) {
   fprintf(stderr, "Error: %s\n", msg);
@@ -68,9 +69,9 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
   }
 
   // recursively sort halves in parallel
-  size_t mid = begin + size/2;
+  size_t mid = begin + size / 2;
 
-// parallelize the recursive sorting
+  // parallelize the recursive sorting
   pid_t pid_l, pid_r;
   int status_l, status_r;
 
@@ -80,7 +81,7 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
     fatal("Failed to fork left child");
   } else if (!pid_l) {
     merge_sort(arr, begin, mid, threshold);
-    exit(0); // Child exits after sorting
+    exit(0);  // Child exits after sorting
   }
 
   // Sort right half in child process
@@ -89,17 +90,23 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
     fatal("Failed to fork right child");
   } else if (!pid_r) {
     merge_sort(arr, mid, end, threshold);
-    exit(0); // Child exits after sorting
+    exit(0);  // Child exits after sorting
   }
 
   // Wait for both child processes to finish and handle
-  waitpid(pid_l, &status_l, 0);
+  pid_t l_actual_pid = waitpid(pid_l, &status_l, 0);
+  if (l_actual_pid == -1) {
+    fatal("Failed to wait for left child");
+  }
   if (!WIFEXITED(status_l) || WEXITSTATUS(status_l)) {
     fatal("Left child did not terminate correctly");
     exit(1);
   }
 
-  waitpid(pid_r, &status_r, 0);
+  pid_t r_actual_pid = waitpid(pid_r, &status_r, 0);
+  if (r_actual_pid == -1) {
+    fatal("Failed to wait for right child");
+  }
   if (!WIFEXITED(status_r) || WEXITSTATUS(status_r)) {
     fatal("Right child did not terminate correctly");
     exit(1);
@@ -110,13 +117,11 @@ void merge_sort(int64_t *arr, size_t begin, size_t end, size_t threshold) {
   int64_t *temp_arr = (int64_t *)malloc(size * sizeof(int64_t));
   merge(arr, begin, mid, end, temp_arr);
 
-  for (size_t i = 0; i < size; i++)
-    arr[begin + i] = temp_arr[i];
+  for (size_t i = 0; i < size; i++) arr[begin + i] = temp_arr[i];
 
   free(temp_arr);
   // success!
 }
-
 
 int main(int argc, char **argv) {
   // check for correct number of command line arguments
@@ -128,7 +133,7 @@ int main(int argc, char **argv) {
   // process command line arguments
   const char *filename = argv[1];
   char *end;
-  size_t threshold = (size_t) strtoul(argv[2], &end, 10);
+  size_t threshold = (size_t)strtoul(argv[2], &end, 10);
   if (end != argv[2] + strlen(argv[2])) {
     // report an error (threshold value is invalid)
     fatal("threshold value is invalid");
@@ -148,10 +153,11 @@ int main(int argc, char **argv) {
     fatal("Error getting file statistics");
   }
   size_t file_size_bytes = buffer.st_size;
-  size_t num_elements = file_size_bytes/8;
+  size_t num_elements = file_size_bytes / 8;
 
   // map the file into memory using mmap
-  int64_t *data = mmap(NULL, file_size_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  int64_t *data =
+      mmap(NULL, file_size_bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   close(fd);
 
   if (data == MAP_FAILED) {
@@ -160,7 +166,7 @@ int main(int argc, char **argv) {
 
   // sort the data!
   merge_sort(data, 0, num_elements, threshold);
-  
+
   // unmap
   munmap(data, file_size_bytes);
 
