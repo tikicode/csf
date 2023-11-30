@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <tuple>
 #include "csapp.h"
 #include "message.h"
 #include "connection.h"
@@ -18,16 +19,56 @@ int main(int argc, char **argv) {
   std::string username = argv[3];
   std::string room_name = argv[4];
 
+  /* Connect to server */
   Connection conn;
+  conn.connect(server_hostname, server_port);
+  if (!conn.is_open()) return 1;
 
-  // TODO: connect to server
+  
+  /* Send rlogin and join messages and get responses */
+  bool login_status = conn.send(Message(TAG_RLOGIN, username));
+  if (!login_status) {
+    std::cerr << "Error: Failed to send login message\n";
+    conn.close();
+    return 1;
+  }
 
-  // TODO: send rlogin and join messages (expect a response from
-  //       the server for each one)
+  Message login_msg = Message();
+  conn.receive(login_msg);
+  if (login_msg.tag == TAG_ERR) {
+    std::cerr << login_msg.data;
+  }
 
-  // TODO: loop waiting for messages from server
-  //       (which should be tagged with TAG_DELIVERY)
+  bool join_status = conn.send(Message(TAG_JOIN, room_name));
+  if (!join_status) {
+    std::cerr << "Error: Failed send join message\n";
+    conn.close();
+    return 1;
+  }
 
+  Message join_msg = Message();
+  conn.receive(join_msg);
+  if (join_msg.tag == TAG_ERR) {
+    std::cerr << join_msg.data;
+  }
+  
+
+  /* Message receiving loop */
+  while (true) {
+    Message msg = Message();
+    bool msg_status = conn.receive(msg);
+    if (!msg_status) {
+      std::cerr << "Error: Invalid message received\n";
+      break;
+    }
+    if (msg.tag == TAG_DELIVERY) {
+      std::string user, message;
+      std::tie(user, message) = split_by_colon(msg.data); // perform assignment on one line
+      std::cout << user << ":" << message << "\n";
+    }
+  }
+
+  conn.close();
 
   return 0;
 }

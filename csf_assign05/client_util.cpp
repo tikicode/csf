@@ -3,6 +3,7 @@
 #include "connection.h"
 #include "message.h"
 #include "client_util.h"
+#include <sstream>
 
 // string trim functions shamelessly stolen from
 // https://www.techiedelight.com/trim-string-cpp-remove-leading-trailing-spaces/
@@ -21,4 +22,12 @@ std::string rtrim(const std::string &s) {
  
 std::string trim(const std::string &s) {
   return rtrim(ltrim(s));
+}
+
+std::pair<std::string, std::string> split_by_colon(const std::string &s) {
+  std::stringstream ss(s);
+  std::string store;
+  std::vector<std::string> res_buf;
+  while (getline(ss, store, ':')) res_buf.push_back(store);
+  return { res_buf[0], res_buf[1] };
 }

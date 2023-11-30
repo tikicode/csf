@@ -40,17 +40,30 @@ void Connection::close() {
 bool Connection::send(const Message &msg) {
   std::string message = msg.tag + ":" + msg.data + "\n";
   ssize_t send_res = rio_writen(m_fd, message.c_str(), message.size());
+
   if (send_res >= 0) {
     m_last_result = SUCCESS;
     return true;
   }
+
   m_last_result = EOF_OR_ERROR;
   return false;
 }
 
 bool Connection::receive(Message &msg) {
+  char buffer[256];
+  ssize_t receive_res = rio_readlineb(&m_fdbuf, buffer, 256);
 
-  // TODO: receive a message, storing its tag and data in msg
-  // return true if successful, false if not
-  // make sure that m_last_result is set appropriately
+  if (receive_res < 0) {
+    m_last_result = INVALID_MSG;
+    return false;
+  }
+  
+  std::string message(buffer);
+  int colon_pos = message.find(':');
+  msg.tag = message.substr(0, colon_pos);
+  msg.data = message.substr(colon_pos+1);
+
+  m_last_result = SUCCESS;
+  return true;
 }
