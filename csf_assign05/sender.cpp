@@ -29,9 +29,10 @@ int main(int argc, char **argv) {
   if (!conn.is_open()) return 1;
 
   /* Send rlogin message and get response */
-  bool login_status = conn.send(Message(TAG_RLOGIN, username));
+  bool login_status = conn.send(Message(TAG_SLOGIN, username));
   if (!login_status) {
     std::cerr << "Error: Failed to send login message\n";
+    conn.close();
     return 1;
   }
 
@@ -81,7 +82,7 @@ int main(int argc, char **argv) {
     } else if (input.substr(0, 6) == "/leave") {
       msg.tag = TAG_LEAVE;
     } else {
-      msg.tag = TAG_SENDALL;
+     x  msg.tag = TAG_SENDALL;
       msg.data = input;
     }
 
