@@ -28,9 +28,10 @@ int main(int argc, char **argv) {
   if (!conn.is_open()) return 1;
 
   /* Send rlogin message and get response */
-  bool login_status = conn.send(Message(TAG_RLOGIN, username));
+  bool login_status = conn.send(Message(TAG_SLOGIN, username));
   if (!login_status) {
     std::cerr << "Error: Failed to send login message\n";
+    conn.close();
     return 1;
   }
 
