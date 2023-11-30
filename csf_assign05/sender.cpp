@@ -1,12 +1,13 @@
 #include <iostream>
-#include <string>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include <tuple>
+
+#include "client_util.h"
+#include "connection.h"
 #include "csapp.h"
 #include "message.h"
-#include "connection.h"
-#include "client_util.h"
 
 int main(int argc, char **argv) {
   if (argc != 4) {
@@ -42,7 +43,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
- /* Loop reading user input */
+  /* Loop reading user input */
   while (true) {
     Message msg = Message();
     std::string input;
@@ -59,28 +60,29 @@ int main(int argc, char **argv) {
 
       Message quit_msg = Message();
       conn.receive(quit_msg);
-      if (quit_msg.tag == TAG_ERR) { // invalid msg needed?
+      if (quit_msg.tag == TAG_ERR) {  // invalid msg needed?
         std::cerr << login_msg.data;
-        conn.close(); // do we always need to close connection?
+        conn.close();  // do we always need to close connection?
         return 1;
       }
       break;
     }
     if (msg.tag == TAG_DELIVERY) {
       std::string user, message;
-      std::tie(user, message) = split_by_colon(msg.data); // perform assignment on one line
+      std::tie(user, message) =
+          split_by_colon(msg.data);  // perform assignment on one line
       if (message.length() > Message::MAX_LEN)
-      std::cout << user << ":" << message << "\n";
+        std::cout << user << ":" << message << "\n";
     }
 
     if (input.substr(0, 5) == "/join") {
       msg.tag = TAG_JOIN;
       msg.data = input.substr(6);
     } else if (input.substr(0, 6) == "/leave") {
-        msg.tag = TAG_LEAVE;
+      msg.tag = TAG_LEAVE;
     } else {
       msg.tag = TAG_SENDALL;
-      msg.data = input; 
+      msg.data = input;
     }
 
     bool msg_status = conn.send(msg);

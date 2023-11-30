@@ -1,39 +1,34 @@
-#include <sstream>
-#include <cctype>
-#include <cassert>
-#include "csapp.h"
-#include "message.h"
 #include "connection.h"
 
-Connection::Connection()
-  : m_fd(-1)
-  , m_last_result(SUCCESS) {
-}
+#include <cassert>
+#include <cctype>
+#include <sstream>
 
-Connection::Connection(int fd)
-  : m_fd(fd)
-  , m_last_result(SUCCESS) {
+#include "csapp.h"
+#include "message.h"
+
+Connection::Connection() : m_fd(-1), m_last_result(SUCCESS) {}
+
+Connection::Connection(int fd) : m_fd(fd), m_last_result(SUCCESS) {
   rio_readinitb(&m_fdbuf, fd);
 }
 
 void Connection::connect(const std::string &hostname, int port) {
   m_fd = open_clientfd(hostname.c_str(), std::to_string(port).c_str());
-  if (m_fd <= -1) fprintf(stderr, "Error: Connection failed");
-  else rio_readinitb(&m_fdbuf, m_fd);
+  if (m_fd <= -1)
+    fprintf(stderr, "Error: Connection failed");
+  else
+    rio_readinitb(&m_fdbuf, m_fd);
 }
 
-Connection::~Connection() {
-  close();
-}
+Connection::~Connection() { close(); }
 
-bool Connection::is_open() const {
-  return m_fd > -1;
-}
+bool Connection::is_open() const { return m_fd > -1; }
 
 void Connection::close() {
   if (is_open()) {
     Close(m_fd);
-    m_fd = -1; // change status to closed
+    m_fd = -1;  // change status to closed
   }
 }
 
@@ -58,11 +53,11 @@ bool Connection::receive(Message &msg) {
     m_last_result = INVALID_MSG;
     return false;
   }
-  
+
   std::string message(buffer);
   int colon_pos = message.find(':');
   msg.tag = message.substr(0, colon_pos);
-  msg.data = message.substr(colon_pos+1);
+  msg.data = message.substr(colon_pos + 1);
 
   m_last_result = SUCCESS;
   return true;
