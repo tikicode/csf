@@ -1,4 +1,5 @@
 #include <sstream>
+#include <iostream>
 #include <cctype>
 #include <cassert>
 #include "csapp.h"
@@ -18,8 +19,10 @@ Connection::Connection(int fd)
 
 void Connection::connect(const std::string &hostname, int port) {
   m_fd = open_clientfd(hostname.c_str(), std::to_string(port).c_str());
-  if (m_fd <= -1) fprintf(stderr, "Error: Connection failed");
-  else rio_readinitb(&m_fdbuf, m_fd);
+  if (m_fd <= -1) 
+    std::cerr << "Error: Connection failed\n";
+  else 
+    rio_readinitb(&m_fdbuf, m_fd);
 }
 
 Connection::~Connection() {
