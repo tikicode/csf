@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
     std::string input;
     getline(std::cin, input);
 
+    // quit case
     if (input == "/quit") {
       msg.tag = TAG_QUIT;
       bool quit_status = conn.send(msg);
@@ -68,6 +69,7 @@ int main(int argc, char **argv) {
       }
       break;
     }
+<<<<<<< HEAD
     if (msg.tag == TAG_DELIVERY) {
       std::string user, message;
       std::tie(user, message) =
@@ -75,11 +77,18 @@ int main(int argc, char **argv) {
       if (message.length() > Message::MAX_LEN)
         std::cout << user << ":" << message << "\n";
     }
+=======
+>>>>>>> refs/remotes/origin/main
 
+    // join, leave, and send all cases
     if (input.substr(0, 5) == "/join") {
       msg.tag = TAG_JOIN;
       msg.data = input.substr(6);
+<<<<<<< HEAD
     } else if (input.substr(0, 6) == "/leave") {
+=======
+    } else if (input == "/leave") {
+>>>>>>> refs/remotes/origin/main
       msg.tag = TAG_LEAVE;
     } else {
      x  msg.tag = TAG_SENDALL;
@@ -89,6 +98,7 @@ int main(int argc, char **argv) {
     bool msg_status = conn.send(msg);
     if (!msg_status) {
       std::cerr << "Error: Failed to send sender message\n";
+      return 1;
     }
 
     Message sent_msg = Message();
@@ -99,6 +109,5 @@ int main(int argc, char **argv) {
   }
 
   conn.close();
-
   return 0;
 }

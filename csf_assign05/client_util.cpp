@@ -29,5 +29,9 @@ std::pair<std::string, std::string> split_by_colon(const std::string &s) {
   std::string store;
   std::vector<std::string> res_buf;
   while (getline(ss, store, ':')) res_buf.push_back(store);
+<<<<<<< HEAD
   return {res_buf[0], res_buf[1]};
+=======
+  return { res_buf[1], res_buf[2] };
+>>>>>>> refs/remotes/origin/main
 }
