@@ -37,6 +37,7 @@ int main(int argc, char **argv) {
   conn.receive(login_msg);
   if (login_msg.tag == TAG_ERR) {
     std::cerr << login_msg.data;
+    return 1;
   }
 
   bool join_status = conn.send(Message(TAG_JOIN, room_name));
@@ -50,15 +51,14 @@ int main(int argc, char **argv) {
   conn.receive(join_msg);
   if (join_msg.tag == TAG_ERR) {
     std::cerr << join_msg.data;
+    return 1;
   }
-  
 
   /* Message receiving loop */
   while (true) {
     Message msg = Message();
     bool msg_status = conn.receive(msg);
     if (!msg_status) {
-      std::cerr << "Error: Invalid message received\n";
       break;
     }
     if (msg.tag == TAG_DELIVERY) {

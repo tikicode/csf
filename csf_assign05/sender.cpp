@@ -52,6 +52,7 @@ int main(int argc, char **argv) {
     // quit case
     if (input == "/quit") {
       msg.tag = TAG_QUIT;
+      msg.data = "cheers";
       bool quit_status = conn.send(msg);
       if (!quit_status) {
         std::cerr << "Error: Failed to send quit message\n";
@@ -61,9 +62,9 @@ int main(int argc, char **argv) {
 
       Message quit_msg = Message();
       conn.receive(quit_msg);
-      if (quit_msg.tag == TAG_ERR) { // invalid msg needed?
+      if (quit_msg.tag == TAG_ERR) { 
         std::cerr << login_msg.data;
-        conn.close(); // do we always need to close connection?
+        conn.close(); 
         return 1;
       }
       break;
@@ -75,6 +76,7 @@ int main(int argc, char **argv) {
       msg.data = input.substr(6);
     } else if (input == "/leave") {
       msg.tag = TAG_LEAVE;
+      msg.data = "yeet";
     } else {
       msg.tag = TAG_SENDALL;
       msg.data = input; 
