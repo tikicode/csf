@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
     std::string input;
     getline(std::cin, input);
 
+    // quit case
     if (input == "/quit") {
       msg.tag = TAG_QUIT;
       bool quit_status = conn.send(msg);
@@ -67,11 +68,13 @@ int main(int argc, char **argv) {
       }
       break;
     }
+
+    // join, leave, and send all cases
     if (input.substr(0, 5) == "/join") {
       msg.tag = TAG_JOIN;
       msg.data = input.substr(6);
-    } else if (input.substr(0, 6) == "/leave") {
-        msg.tag = TAG_LEAVE;
+    } else if (input == "/leave") {
+      msg.tag = TAG_LEAVE;
     } else {
       msg.tag = TAG_SENDALL;
       msg.data = input; 
@@ -80,6 +83,7 @@ int main(int argc, char **argv) {
     bool msg_status = conn.send(msg);
     if (!msg_status) {
       std::cerr << "Error: Failed to send sender message\n";
+      return 1;
     }
 
     Message sent_msg = Message();
@@ -90,6 +94,5 @@ int main(int argc, char **argv) {
   }
 
   conn.close();
-
   return 0;
 }

@@ -64,11 +64,10 @@ int main(int argc, char **argv) {
     if (msg.tag == TAG_DELIVERY) {
       std::string user, message;
       std::tie(user, message) = split_by_colon(msg.data); // perform assignment on one line
-      std::cout << user << ":" << message << "\n";
+      std::cout << user << ":" << message;
     }
   }
 
   conn.close();
-
   return 0;
 }
