@@ -67,13 +67,6 @@ int main(int argc, char **argv) {
       }
       break;
     }
-    if (msg.tag == TAG_DELIVERY) {
-      std::string user, message;
-      std::tie(user, message) = split_by_colon(msg.data); // perform assignment on one line
-      if (message.length() > Message::MAX_LEN)
-      std::cout << user << ":" << message << "\n";
-    }
-
     if (input.substr(0, 5) == "/join") {
       msg.tag = TAG_JOIN;
       msg.data = input.substr(6);
