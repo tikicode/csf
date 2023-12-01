@@ -85,6 +85,7 @@ int main(int argc, char **argv) {
     bool msg_status = conn.send(msg);
     if (!msg_status) {
       std::cerr << "Error: Failed to send sender message\n";
+      conn.close();
       return 1;
     }
 

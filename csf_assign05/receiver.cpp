@@ -24,7 +24,6 @@ int main(int argc, char **argv) {
   conn.connect(server_hostname, server_port);
   if (!conn.is_open()) return 1;
 
-  
   /* Send rlogin and join messages and get responses */
   bool login_status = conn.send(Message(TAG_RLOGIN, username));
   if (!login_status) {
@@ -37,6 +36,7 @@ int main(int argc, char **argv) {
   conn.receive(login_msg);
   if (login_msg.tag == TAG_ERR) {
     std::cerr << login_msg.data;
+    conn.close();
     return 1;
   }
 
@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   conn.receive(join_msg);
   if (join_msg.tag == TAG_ERR) {
     std::cerr << join_msg.data;
+    conn.close();
     return 1;
   }
 
@@ -58,13 +59,12 @@ int main(int argc, char **argv) {
   while (true) {
     Message msg = Message();
     bool msg_status = conn.receive(msg);
-    if (!msg_status) {
+    if (!msg_status)
       break;
-    }
     if (msg.tag == TAG_DELIVERY) {
       std::string user, message;
       std::tie(user, message) = split_by_colon(msg.data); // perform assignment on one line
-      std::cout << user << ":" << message;
+      std::cout << user << ": " << message;
     }
   }
 

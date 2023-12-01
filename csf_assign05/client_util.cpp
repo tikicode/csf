@@ -26,8 +26,14 @@ std::string trim(const std::string &s) {
 
 std::pair<std::string, std::string> split_by_colon(const std::string &s) {
   std::stringstream ss(s);
-  std::string store;
-  std::vector<std::string> res_buf;
-  while (getline(ss, store, ':')) res_buf.push_back(store);
-  return { res_buf[1], res_buf[2] };
+  std::string store; 
+  // Note: originally looped over input using a vector 
+  // but felt it was overkill for extracting the 
+  // second two portions of the string delimited by ':'
+  getline(ss, store, ':'); // throw away first line
+  getline(ss, store, ':'); 
+  std::string user = store;
+  getline(ss, store, ':');
+  std::string msg = store;
+  return { user, msg }; // return pair for ease of assignment
 }
