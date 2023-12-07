@@ -53,6 +53,7 @@ int main(int argc, char **argv) {
     // quit case
     if (input == "/quit") {
       msg.tag = TAG_QUIT;
+      msg.data = "cheers";
       bool quit_status = conn.send(msg);
       if (!quit_status) {
         std::cerr << "Error: Failed to send quit message\n";
@@ -62,9 +63,15 @@ int main(int argc, char **argv) {
 
       Message quit_msg = Message();
       conn.receive(quit_msg);
+<<<<<<< HEAD
       if (quit_msg.tag == TAG_ERR) {  // invalid msg needed?
         std::cerr << login_msg.data;
         conn.close();  // do we always need to close connection?
+=======
+      if (quit_msg.tag == TAG_ERR) { 
+        std::cerr << login_msg.data;
+        conn.close(); 
+>>>>>>> refs/remotes/origin/main
         return 1;
       }
       break;
@@ -90,6 +97,7 @@ int main(int argc, char **argv) {
     } else if (input == "/leave") {
 >>>>>>> refs/remotes/origin/main
       msg.tag = TAG_LEAVE;
+      msg.data = "yeet";
     } else {
      x  msg.tag = TAG_SENDALL;
       msg.data = input;
@@ -98,6 +106,7 @@ int main(int argc, char **argv) {
     bool msg_status = conn.send(msg);
     if (!msg_status) {
       std::cerr << "Error: Failed to send sender message\n";
+      conn.close();
       return 1;
     }
 
