@@ -1,12 +1,9 @@
-<<<<<<< HEAD
-=======
 #include <sstream>
 #include <iostream>
 #include <cctype>
 #include <cassert>
 #include "csapp.h"
 #include "message.h"
->>>>>>> refs/remotes/origin/main
 #include "connection.h"
 
 #include <cassert>
@@ -24,15 +21,9 @@ Connection::Connection(int fd) : m_fd(fd), m_last_result(SUCCESS) {
 
 void Connection::connect(const std::string &hostname, int port) {
   m_fd = open_clientfd(hostname.c_str(), std::to_string(port).c_str());
-<<<<<<< HEAD
-  if (m_fd <= -1)
-    fprintf(stderr, "Error: Connection failed");
-  else
-=======
   if (m_fd <= -1) 
     std::cerr << "Error: Connection failed\n";
   else 
->>>>>>> refs/remotes/origin/main
     rio_readinitb(&m_fdbuf, m_fd);
 }
 

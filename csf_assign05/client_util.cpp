@@ -46,5 +46,4 @@ std::pair<std::string, std::string> split_by_colon(const std::string &s) {
   getline(ss, store, ':');
   std::string msg = store;
   return { user, msg }; // return pair for ease of assignment
->>>>>>> refs/remotes/origin/main
 }

@@ -63,43 +63,23 @@ int main(int argc, char **argv) {
 
       Message quit_msg = Message();
       conn.receive(quit_msg);
-<<<<<<< HEAD
-      if (quit_msg.tag == TAG_ERR) {  // invalid msg needed?
-        std::cerr << login_msg.data;
-        conn.close();  // do we always need to close connection?
-=======
       if (quit_msg.tag == TAG_ERR) { 
         std::cerr << login_msg.data;
         conn.close(); 
->>>>>>> refs/remotes/origin/main
         return 1;
       }
       break;
     }
-<<<<<<< HEAD
-    if (msg.tag == TAG_DELIVERY) {
-      std::string user, message;
-      std::tie(user, message) =
-          split_by_colon(msg.data);  // perform assignment on one line
-      if (message.length() > Message::MAX_LEN)
-        std::cout << user << ":" << message << "\n";
-    }
-=======
->>>>>>> refs/remotes/origin/main
 
     // join, leave, and send all cases
     if (input.substr(0, 5) == "/join") {
       msg.tag = TAG_JOIN;
       msg.data = input.substr(6);
-<<<<<<< HEAD
-    } else if (input.substr(0, 6) == "/leave") {
-=======
     } else if (input == "/leave") {
->>>>>>> refs/remotes/origin/main
       msg.tag = TAG_LEAVE;
       msg.data = "yeet";
     } else {
-     x  msg.tag = TAG_SENDALL;
+      msg.tag = TAG_SENDALL;
       msg.data = input;
     }
 
