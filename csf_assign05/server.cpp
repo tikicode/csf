@@ -43,7 +43,7 @@ namespace {
     conn->send(Message(TAG_ERR, "Failure to login"));
     return nullptr;
     } else {
-      conn->send(Message(TAG_ERR, "Login first"));
+      conn->send(Message(TAG_ERR, "Login before trying other actions"));
       return nullptr;
     }
     if (message.tag == TAG_RLOGIN) {
@@ -105,7 +105,7 @@ void chat_with_sender(communication_data *comm, std::string &username) {
     }
     //quitting the server handling
     if (message.tag == TAG_QUIT) {
-      conn->send(Message(TAG_OK, ""));
+      conn->send(Message(TAG_OK, "Quit connection"));
       return;
     }
     //if message is too large handling
