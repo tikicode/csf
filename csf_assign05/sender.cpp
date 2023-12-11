@@ -63,9 +63,9 @@ int main(int argc, char **argv) {
 
       Message quit_msg = Message();
       conn.receive(quit_msg);
-      if (quit_msg.tag == TAG_ERR) { 
+      if (quit_msg.tag == TAG_ERR) {
         std::cerr << login_msg.data;
-        conn.close(); 
+        conn.close();
         return 1;
       }
       break;

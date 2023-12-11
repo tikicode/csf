@@ -31,13 +31,13 @@ std::pair<std::string, std::string> split_by_colon(const std::string &s) {
   while (getline(ss, store, ':')) res_buf.push_back(store);
   return {res_buf[0], res_buf[1]};
 
-  // Note: originally looped over input using a vector 
-  // but felt it was overkill for extracting the 
+  // Note: originally looped over input using a vector
+  // but felt it was overkill for extracting the
   // second two portions of the string delimited by ':'
-  getline(ss, store, ':'); // throw away first line
-  getline(ss, store, ':'); 
+  getline(ss, store, ':');  // throw away first line
+  getline(ss, store, ':');
   std::string user = store;
   getline(ss, store, ':');
   std::string msg = store;
-  return { user, msg }; // return pair for ease of assignment
+  return {user, msg};  // return pair for ease of assignment
 }

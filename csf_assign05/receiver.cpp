@@ -61,11 +61,11 @@ int main(int argc, char **argv) {
   while (true) {
     Message msg = Message();
     bool msg_status = conn.receive(msg);
-    if (!msg_status)
-      break;
+    if (!msg_status) break;
     if (msg.tag == TAG_DELIVERY) {
       std::string user, message;
-      std::tie(user, message) = split_by_colon(msg.data); // perform assignment on one line
+      std::tie(user, message) =
+          split_by_colon(msg.data);  // perform assignment on one line
       std::cout << user << ": " << message;
     }
   }
