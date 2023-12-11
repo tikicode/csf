@@ -100,6 +100,10 @@ void chat_with_sender(communication_data *comm, std::string &username) {
       conn->send(Message(TAG_OK, "Message sent to all in the room"));
       continue;
     }
+    if (message.tag == TAG_QUIT) {
+      conn->send(Message(TAG_OK, "User has quit"));
+      return;
+    }
     conn->send(Message(TAG_ERR, "Problem with parsing message"));
   }
 }
@@ -144,7 +148,6 @@ void chat_with_receiver(communication_data *comm, User *user) {
       delete to_receive;
     }
   }
-
     room->remove_member(user);
 }
 
@@ -163,9 +166,14 @@ Server::~Server() {
 }
 
 bool Server::listen() {
-  if (open_listenfd(std::to_string(m_port).c_str()) == 0) return true;
-  std::cerr << "Error: failed to create server socket\n";
-  return false;
+    m_ssock = open_listenfd(std::to_string(m_port).c_str());
+    bool isSocketOpen = (m_ssock != -1);
+
+    if (!isSocketOpen) {
+        std::cerr << "Error: failed to open server socket\n";
+    }
+
+    return isSocketOpen;
 }
 
 void Server::handle_client_requests() {
