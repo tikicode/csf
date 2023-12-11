@@ -21,7 +21,7 @@ private:
   // prohibit value semantics
   Server(const Server &);
   Server &operator=(const Server &);
-
+  
   typedef std::map<std::string, Room *> RoomMap;
 
   // These member variables are sufficient for implementing
