@@ -23,9 +23,6 @@ struct communication_data {
   ~communication_data() {delete connection;}
 };
 
-// TODO: add any additional data types that might be helpful
-//       for implementing the Server member functions
-
 ////////////////////////////////////////////////////////////////////////
 // Client thread functions
 ////////////////////////////////////////////////////////////////////////
@@ -33,7 +30,6 @@ void chat_with_sender (communication_data *comm, std::string &username);
 void chat_with_receiver (communication_data *comm, User *user);
 
 namespace {
-
   void *worker(void *arg) {
     pthread_detach(pthread_self());
     communication_data *comm = (communication_data*)arg;
@@ -45,9 +41,10 @@ namespace {
       conn->send(Message(TAG_OK, "Successfully logged in"));
     } else if (!conn_status) {
     conn->send(Message(TAG_ERR, "Failure to login"));
-    return NULL;
+    return nullptr;
     } else {
       conn->send(Message(TAG_ERR, "Login first"));
+      return nullptr;
     }
     if (message.tag == TAG_RLOGIN) {
       User *user = new User(message.data.substr(0, message.data.size()-1));
@@ -76,51 +73,65 @@ void chat_with_sender(communication_data *comm, std::string &username) {
         conn->send(Message(TAG_ERR, "Error receiving message"));
       }
     }
+    //error tag handling
     if (message.tag == TAG_ERR) {
+      std::string adj_message_data = message.data.substr(0, message.data.size()-1);
+      conn->send(Message(TAG_ERR, adj_message_data));
       std::cerr << message.data;
       return;
     }
+    //joining a room handling
     if (message.tag == TAG_JOIN){
       room = server->find_or_create_room(message.data);
       conn->send(Message(TAG_OK, "Joined Room"));
       continue;
     }
+    //case where sender is not in a room and does an action other than joining a room
     if (message.tag != TAG_JOIN && !room) {
       conn->send(Message(TAG_ERR, "Join a room before attempting other actions"));
       continue;
     }
+    //leaving a room handling
     if (message.tag == TAG_LEAVE) {
-      //idt I need to check if !room because of prev statement
       room = nullptr;
       conn->send(Message(TAG_OK, "Left Room"));
       continue;
     }
+    //sending to all all receivers in room handling
     if (message.tag == TAG_SENDALL) {
-      room->broadcast_message(username, message.data);
+      room->broadcast_message(username, message.data.substr(0, message.data.size()-1));
       conn->send(Message(TAG_OK, "Message sent to all in the room"));
       continue;
     }
+    //quitting the server handling
     if (message.tag == TAG_QUIT) {
-      conn->send(Message(TAG_OK, "User has quit"));
+      conn->send(Message(TAG_OK, ""));
       return;
     }
+    //if message is too large handling
+    if (message.data.size() > Message::MAX_LEN) {
+      conn->send(Message(TAG_ERR, "Message exceeds max length"));
+      continue;
+    }
+    //all other issues
     conn->send(Message(TAG_ERR, "Problem with parsing message"));
   }
 }
-void chat_with_receiver(communication_data *comm, User *user) {
-    Message msg;
-    Connection *conn = comm->connection;
-    Server *serv = comm->server;
 
-    // Initial message reception and error handling
-    if (!conn->receive(msg)) {
-      Connection::Result last_result = conn->get_last_result();
+void chat_with_receiver(communication_data *comm, User *user) {
+  Message msg;
+  Connection *conn = comm->connection;
+  Server *serv = comm->server;
+
+  // Initial message reception and error handling
+  if (!conn->receive(msg)) {
+    Connection::Result last_result = conn->get_last_result();
       if (last_result == Connection::INVALID_MSG || last_result == Connection::EOF_OR_ERROR) {
         conn->send(Message(TAG_ERR, "Invalid message or parsing error"));
       }else {
         conn->send(Message(TAG_ERR, "Could not receive message"));
       }
-      return;
+    return;
   }
 
   Room *room = nullptr;
@@ -139,16 +150,16 @@ void chat_with_receiver(communication_data *comm, User *user) {
   }
 
   while (true) {
-    Message *to_receive = user->mqueue.dequeue();
-    if (to_receive) {
-      if (!conn->send(*to_receive)) {
-        delete to_receive;
+    Message *receive = user->mqueue.dequeue();
+    if (receive) {
+      if (!conn->send(*receive)) {
+        delete receive;
         break;
       }
-      delete to_receive;
+      delete receive;
     }
   }
-    room->remove_member(user);
+  room->remove_member(user);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -158,7 +169,7 @@ void chat_with_receiver(communication_data *comm, User *user) {
 Server::Server(int port)
   : m_port(port)
   , m_ssock(-1) {
-  pthread_mutex_init(&m_lock, NULL);
+  pthread_mutex_init(&m_lock, nullptr);
 }
 
 Server::~Server() {
@@ -178,36 +189,23 @@ bool Server::listen() {
 
 void Server::handle_client_requests() {
   while (true) {
-    int client_fd = accept_new_client();
-    if (client_fd == -1) continue;
-    if (!initialize_client_communication(client_fd)) {
-      std::cerr << "Error: failed to initialize client communication\n";
-      close(client_fd);
+    int fd = accept(m_ssock, nullptr, nullptr);
+
+    if (fd == -1) {
+      std::cerr << "Error: could not accept client connection\n";
       continue;
     }
-  }
-}
 
-int Server::accept_new_client()  {
-  int fd = accept(m_ssock, nullptr, nullptr);
-  if (fd == -1) {
-    std::cerr << "Error: could not accept client connection\n";
-  }
-  return fd;
-}
+    communication_data *comm = new communication_data();
+    comm->connection = new Connection(fd);
+    comm->server = this;
 
-bool Server::initialize_client_communication(int fd)  {
-  communication_data *comm = new communication_data();
-  comm->connection = new Connection(fd);
-  comm->server = this;
-  pthread_t thread;
-  if (pthread_create(&thread, nullptr, worker, comm) != 0) {
-    std::cerr << "Error: failed to create thread\n";
-    delete comm->connection;
-    delete comm;
-    return false;
+    pthread_t thread;
+    if (pthread_create(&thread, nullptr, worker, comm) != 0) {
+      std::cerr << "Error: failed to create thread\n";
+      return;
+    }
   }
-  return true;
 }
 
 
@@ -216,7 +214,8 @@ Room *Server::find_or_create_room(const std::string &room_name) {
   if (m_rooms[room_name]) {
     return m_rooms[room_name];
   } else {
-    Room *room = new Room(room_name);
+    std::string adj_room_name = room_name.substr(0, room_name.size()-1);
+    Room *room = new Room(adj_room_name);
     m_rooms[room_name] = room;
     return room;
   }
