@@ -29,8 +29,8 @@ struct communication_data {
 ////////////////////////////////////////////////////////////////////////
 // Client thread functions
 ////////////////////////////////////////////////////////////////////////
-void handle_client_comm_sender (communication_data *comm, std::string &username);
-void handle_client_comm_receiver (communication_data *comm, User *user);
+void chat_with_sender (communication_data *comm, std::string &username);
+void chat_with_receiver (communication_data *comm, User *user);
 
 namespace {
 
@@ -38,6 +38,7 @@ namespace {
     pthread_detach(pthread_self());
     communication_data *comm = (communication_data*)arg;
     Connection *conn = comm->connection;
+
     Message message = Message();
     bool conn_status = conn->receive(message);
     if (message.tag == TAG_RLOGIN || message.tag == TAG_SLOGIN) {
@@ -50,18 +51,18 @@ namespace {
     }
     if (message.tag == TAG_RLOGIN) {
       User *user = new User(message.data.substr(0, message.data.size()-1));
-      handle_client_comm_receiver(comm, user);
+      chat_with_receiver(comm, user);
     }
     else {
       std::string username = message.data.substr(0, message.data.size()-1);
-      handle_client_comm_sender(comm, username);
+      chat_with_sender(comm, username);
     }
 
     return nullptr;
   }
 }
 
-void handle_client_comm_sender (communication_data *comm, std::string &username) {
+void chat_with_sender(communication_data *comm, std::string &username) {
   Connection *conn = comm->connection;
   Server *server = comm->server;
   Room *room = nullptr;
@@ -102,8 +103,49 @@ void handle_client_comm_sender (communication_data *comm, std::string &username)
     conn->send(Message(TAG_ERR, "Problem with parsing message"));
   }
 }
-void handle_client_comm_receiver (communication_data *comm, User *user) {
-  
+void chat_with_receiver(communication_data *comm, User *user) {
+    Message msg;
+    Connection *conn = comm->connection;
+    Server *serv = comm->server;
+
+    // Initial message reception and error handling
+    if (!conn->receive(msg)) {
+      Connection::Result last_result = conn->get_last_result();
+      if (last_result == Connection::INVALID_MSG || last_result == Connection::EOF_OR_ERROR) {
+        conn->send(Message(TAG_ERR, "Invalid message or parsing error"));
+      }else {
+        conn->send(Message(TAG_ERR, "Could not receive message"));
+      }
+      return;
+  }
+
+  Room *room = nullptr;
+  while (!room) {
+    if (msg.tag == TAG_JOIN) {
+      room = serv->find_or_create_room(msg.data);
+        room->add_member(user);
+        conn->send(Message(TAG_OK, "Joined room"));
+        break;
+    } else {
+      conn->send(Message(TAG_ERR, "Must first join a room"));
+      if (!conn->receive(msg)) {
+        return; 
+      }
+    }
+  }
+
+  while (true) {
+    Message *to_receive = user->mqueue.dequeue();
+    if (to_receive) {
+      if (!conn->send(*to_receive)) {
+        delete to_receive;
+        break;
+      }
+      delete to_receive;
+    }
+  }
+
+    room->remove_member(user);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -127,12 +169,39 @@ bool Server::listen() {
 }
 
 void Server::handle_client_requests() {
-  // TODO: infinite loop calling accept or Accept, starting a new
-  //       pthread for each connected client
-  // while (true) {
-  //   accept()
-  // }
+  while (true) {
+    int client_fd = accept_new_client();
+    if (client_fd == -1) continue;
+    if (!initialize_client_communication(client_fd)) {
+      std::cerr << "Error: failed to initialize client communication\n";
+      close(client_fd);
+      continue;
+    }
+  }
 }
+
+int Server::accept_new_client()  {
+  int fd = accept(m_ssock, nullptr, nullptr);
+  if (fd == -1) {
+    std::cerr << "Error: could not accept client connection\n";
+  }
+  return fd;
+}
+
+bool Server::initialize_client_communication(int fd)  {
+  communication_data *comm = new communication_data();
+  comm->connection = new Connection(fd);
+  comm->server = this;
+  pthread_t thread;
+  if (pthread_create(&thread, nullptr, worker, comm) != 0) {
+    std::cerr << "Error: failed to create thread\n";
+    delete comm->connection;
+    delete comm;
+    return false;
+  }
+  return true;
+}
+
 
 Room *Server::find_or_create_room(const std::string &room_name) {
   Guard guard(m_lock);

@@ -21,6 +21,8 @@ private:
   // prohibit value semantics
   Server(const Server &);
   Server &operator=(const Server &);
+  int accept_new_client();
+  bool initialize_client_communication(int fd);
   
   typedef std::map<std::string, Room *> RoomMap;
 
