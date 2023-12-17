@@ -49,11 +49,10 @@ int main(int argc, char **argv) {
     Message msg = Message();
     std::string input;
     getline(std::cin, input);
-
     // quit case
     if (input == "/quit") {
       msg.tag = TAG_QUIT;
-      msg.data = "cheers";
+      msg.data = "";
       bool quit_status = conn.send(msg);
       if (!quit_status) {
         std::cerr << "Error: Failed to send quit message\n";
@@ -63,7 +62,7 @@ int main(int argc, char **argv) {
 
       Message quit_msg = Message();
       conn.receive(quit_msg);
-      if (quit_msg.tag == TAG_ERR) {
+      if (quit_msg.tag == TAG_ERR || conn.get_last_result() == Connection::INVALID_MSG) {
         std::cerr << login_msg.data;
         conn.close();
         return 1;
@@ -77,7 +76,7 @@ int main(int argc, char **argv) {
       msg.data = input.substr(6);
     } else if (input == "/leave") {
       msg.tag = TAG_LEAVE;
-      msg.data = "yeet";
+      msg.data = "";
     } else {
       msg.tag = TAG_SENDALL;
       msg.data = input;
@@ -92,7 +91,7 @@ int main(int argc, char **argv) {
 
     Message sent_msg = Message();
     conn.receive(sent_msg);
-    if (sent_msg.tag == TAG_ERR) {
+    if (sent_msg.tag == TAG_ERR || conn.get_last_result() == Connection::INVALID_MSG) {
       std::cerr << sent_msg.data;
     }
   }

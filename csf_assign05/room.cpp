@@ -8,7 +8,7 @@
 #include "user.h"
 
 Room::Room(const std::string &room_name) : room_name(room_name) {
-  pthread_mutex_init(&lock, nullptr);
+  pthread_mutex_init(&lock, NULL);
 }
 
 Room::~Room() { pthread_mutex_destroy(&lock); }
