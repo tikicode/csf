@@ -39,7 +39,6 @@ namespace {
     bool conn_status = conn->receive(message);
     if (!conn_status) {
     conn->send(Message(TAG_ERR, "Failure to login"));
-    std::cerr << "Failure to login";
     return NULL;
     } else if (message.tag == TAG_RLOGIN || message.tag == TAG_SLOGIN) {
       conn->send(Message(TAG_OK, "Successfully logged in"));

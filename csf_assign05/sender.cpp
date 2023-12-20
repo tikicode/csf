@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 
     Message sent_msg = Message();
     conn.receive(sent_msg);
-    if (sent_msg.tag == TAG_ERR || conn.get_last_result() == Connection::INVALID_MSG) {
+    if (sent_msg.tag == TAG_ERR || conn.get_last_result() == Connection::INVALID_MSG ) {
       std::cerr << sent_msg.data;
     }
   }

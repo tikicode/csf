@@ -1,4 +1,4 @@
-#include "message_queue.h"
+ #include "message_queue.h"
 
 #include <pthread.h>
 #include <semaphore.h>
@@ -28,7 +28,7 @@ void MessageQueue::enqueue(Message *msg) {
 
 Message *MessageQueue::dequeue() {
   struct timespec ts;
-  clock_gettime(CLOCK_REALTIME, &ts);
+  clock_gettime(CLOCK_REALTIME, &ts); 
   ts.tv_sec += 1;  // compute a time one second in the future
 
   Message *msg = NULL;
